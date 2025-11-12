@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Automatização - Template Padrão</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            padding: 30px; 
+            background-color: #e9eef2; 
+        }
+        .container { 
+            max-width: 1000px; 
+            margin: 0 auto; 
+            background-color: white; 
+            padding: 40px; 
+            border-radius: 12px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1); 
+            border-top: 5px solid #0070d2; 
+        }
+        
+        /* Título Principal */
+        h1 { 
+            color: #1a1a1a; 
+            font-size: 2.2em; 
+            margin-bottom: 5px;
+            text-align: center; 
+        }
+        
+        /* Subtítulo */
+        h2 { 
+            color: #6a6a6a; 
+            font-size: 1.2em; 
+            font-weight: 300; 
+            border-bottom: 2px solid #e0e0e0; 
+            padding-bottom: 10px; 
+            margin-top: 0;
+            margin-bottom: 30px;
+            text-align: center; 
+        }
+        
+        /* Estilos para a seção de ferramentas */
+        .tool-section {
+            padding: 10px 0;
+        }
+
+        /* Estilos de Botão e Caixas de Texto (Ajustados para o novo layout) */
+        textarea { 
+            width: 100%; 
+            min-height: 150px; 
+            padding: 12px; 
+            margin-bottom: 10px; 
+            border: 1px solid #ccc; 
+            border-radius: 6px; 
+            box-sizing: border-box; 
+            resize: vertical; 
+            font-family: 'Consolas', 'Courier New', monospace; /* Fonte de largura fixa para consistência */
+            font-size: 14px; 
+            overflow-y: scroll;
+            text-align: left; /* Garante que tudo dentro do textarea seja alinhado à esquerda */
+        }
+        
+        /* Botão Primário (Gerar/Processar) - Cor Azul Padrão */
+        button { 
+            background-color: #0070d2; 
+            color: white; 
+            padding: 12px 20px; 
+            border: none; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            font-size: 16px; 
+            transition: background-color 0.3s ease; 
+            margin-right: 10px;
+            font-weight: 600; 
+        }
+        button:hover { 
+            background-color: #005fb5; 
+        }
+
+        /* Botão Secundário/Copiar - Cor VERDE */
+        .copy-button {
+            background-color: #4caf50; 
+            color: white; 
+            padding: 8px 15px; 
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        .copy-button:hover {
+             background-color: #45a049; 
+        }
+
+        .result-box { 
+            margin-top: 25px; 
+            padding: 20px; 
+            border: 1px solid #dcdcdc; 
+            background-color: #f8f8f8; 
+            border-radius: 6px; 
+            overflow-x: auto; 
+        }
+        .grid-section { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 30px; 
+        }
+        .step { 
+            padding: 20px; 
+            border: 1px solid #a8c6e2; 
+            border-radius: 8px; 
+            background-color: #eef5fb; 
+            margin-bottom: 25px;
+        }
+        .success { 
+            color: #0070d2; 
+            background-color: #e5f1ff; 
+            border: 1px solid #cce0ff; 
+            padding: 10px; 
+            border-radius: 4px; 
+            margin-bottom: 15px; 
+            font-weight: bold; 
+            text-align: center;
+        }
+        .hidden { display: none; }
+        .excel-tip { 
+            color: #8a6d3b; 
+            background-color: #fffbe6; 
+            border: 1px solid #faebcc; 
+            padding: 15px; 
+            border-radius: 6px; 
+            margin-top: 15px; 
+            font-size: 14px; 
+        }
+        .excel-tip strong { color: #b17e1a; }
+        .error-note { 
+            color: #a94442; 
+            background-color: #f2dede; 
+            border: 1px solid #ebccd1; 
+            padding: 10px; 
+            border-radius: 4px; 
+            margin-top: 10px; 
+        }
+        .id-counter {
+            margin-top: 10px;
+            font-weight: bold;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Automatização</h1>
+        <h2>Frente - Concierge</h2>
+        
+        <div class="tool-section">
+            
+            <hr style="border: 0; border-top: 1px solid #e0e0e0; margin: 20px 0;">
+
+            <div class="step">
+                <h3>1️⃣ Etapa: Geração da Query SOQL</h3>
+                <p><strong>Ação:</strong> Cole o conteúdo da coluna **ID do segurado** do seu Excel. Um ID por linha. O código removerá automaticamente o cabeçalho.</p>
+                <textarea id="inputIds" placeholder="Exemplo:&#10;ID do segurado&#10;07156000049240100&#10;24834009000040013&#10;..." onpaste="setTimeout(() => this.scrollTop = 0, 0);"></textarea>
+                <button onclick="generateQuery()">Gerar Query SOQL</button>
+                <div class="result-box hidden" id="queryResultBox">
+                    <p><strong>Query SOQL Gerada (Copie e Cole no Salesforce Inspector):</strong></p>
+                    <textarea id="outputQuery" readonly></textarea>
+                    <button class="copy-button" onclick="copyToClipboard('outputQuery', 'Query')">Copiar Query SOQL</button>
+                    <div class="id-counter hidden" id="idCountDisplay"></div>
+                </div>
+            </div>
+
+            <hr style="border: 0; border-top: 1px solid #e0e0e0; margin: 20px 0;">
+
+            <div class="step">
+                <h3>2️⃣ Etapa: Processamento e Simulação do PROCV</h3>
+                
+                <div class="grid-section">
+                    <div>
+                        <p><strong>Planilha Original (Input Esquerdo - ORDEM FINAL):</strong></p>
+                        <textarea id="inputOriginal" placeholder="COLE AQUI a coluna ID do segurado (com a ordem exata que você deseja no resultado final)." onpaste="setTimeout(() => this.scrollTop = 0, 0);"></textarea>
+                    </div>
+                    <div>
+                        <p><strong>Resultado do Salesforce Inspector (Input Direito - Fonte de Dados):</strong></p>
+                        <textarea id="inputSalesforce" placeholder="Cole o resultado da Query SOQL AQUI, com as colunas Name, Id e COD_CHAVE_EXT_CONTA__c (em qualquer ordem)." onpaste="setTimeout(() => this.scrollTop = 0, 0);"></textarea>
+                    </div>
+                </div>
+
+                <button onclick="processData()">Processar e Gerar Resultado Final</button>
+
+                <div class="result-box hidden" id="finalResultBox">
+                    <p class="success" id="resultText">Resultado Final (Copie e Cole no Excel)</p>
+                    <textarea id="outputFinal" readonly style="min-height: 250px;"></textarea>
+                    <button class="copy-button" onclick="copyToClipboard('outputFinal', 'Resultado Final')">Copiar Resultado (Formato Excel)</button>
+                    <div class="id-counter hidden" id="finalCountDisplay"></div>
+                    <div class="excel-tip">
+                        <strong>PASSO CRÍTICO:</strong> Para que os IDs longos (ex: 88888...) não sejam convertidos para notação científica (1.275E+15) no Excel, você deve **formatar as colunas de destino no Excel como 'Texto'** antes de colar o resultado.
+                    </div>
+                    <div class="error-note hidden" id="missingIdWarning">
+                        <strong>Notificação</strong>: Alguns IDs da sua lista não foram encontrados no resultado do Salesforce e foram preenchidos com #N/D para simular o comportamento do PROCV.
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+
+    </div>
+
+<script>
+    // Separador de colunas ao copiar do Excel/SF (TAB)
+    const INPUT_DELIMITER = '\t'; 
+    // Separador de colunas para colar no Excel (TAB)
+    const OUTPUT_DELIMITER = '\t'; 
+    // Valor de simulação do PROCV não encontrado
+    const NOT_FOUND_VALUE = '#N/D'; 
+    // Tamanho padrão dos IDs de Segurado (para parser de colagem bruta)
+    const ID_SEGURADO_LENGTH = 17; 
+    // Tamanho padrão dos IDs do Salesforce (Chave Externa)
+    const ID_SF_LENGTH = 18;
+    // Prefixo que indica o início de um novo registro no Salesforce Inspector (colagem bruta)
+    const SF_RECORD_START = '[BENEFICIARIO__c]'; 
+    // Prefixo da coluna a ser ignorada
+    const SF_IGNORE_COLUMN = '_';
+
+    function copyToClipboard(elementId, type) {
+        const copyText = document.getElementById(elementId);
+        copyText.select();
+        copyText.setSelectionRange(0, 99999); 
+        
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(copyText.value).then(function() {
+                    alert(type + ' copiada com sucesso! (Cole no ' + (type.includes('Query') ? 'Salesforce Inspector' : 'Excel') + ')');
+                }, function() {
+                    document.execCommand('copy');
+                    alert(type + ' copiada com sucesso! (Cole no ' + (type.includes('Query') ? 'Salesforce Inspector' : 'Excel') + ')');
+                });
+            } else {
+                document.execCommand('copy');
+                alert(type + ' copiada com sucesso! (Cole no ' + (type.includes('Query') ? 'Salesforce Inspector' : 'Excel') + ')');
+            }
+            
+        } catch (err) {
+            alert('Erro ao copiar ' + type + '. Por favor, copie manualmente.');
+        }
+    }
+
+    /**
+     * Remove aspas duplas ou simples que circundam o valor.
+     * @param {string} value O valor a ser limpo.
+     * @returns {string} O valor limpo.
+     */
+    function stripQuotes(value) {
+        const trimmed = value.trim();
+        if (trimmed.length < 2) return trimmed;
+        
+        // Remove aspas duplas (") ou simples (') no início e no fim
+        if ((trimmed.startsWith('"') && trimmed.endsWith('"')) || (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+            return trimmed.substring(1, trimmed.length - 1).trim();
+        }
+        return trimmed;
+    }
+
+
+    /**
+     * Limpa o input, remove linhas vazias no final e opcionalmente remove o cabeçalho.
+     * Tenta quebrar IDs de 17 dígitos se o input vier como uma string contínua.
+     */
+    function cleanAndExtractIds(input, removeHeader = true) {
+        const trimmedInput = input.trim();
+
+        // 1. Tenta quebrar por linha
+        let lines = trimmedInput.split('\n')
+                               .map(line => line.trim())
+                               .filter(line => line.length > 0);
+
+        // 2. Se o input parece ser uma única linha de IDs concatenados (sem \n), tenta forçar a quebra a cada ID_SEGURADO_LENGTH (17)
+        if (lines.length <= 1 && trimmedInput.length > ID_SEGURADO_LENGTH) {
+            
+            let dataPart = trimmedInput;
+            
+            // Remove o cabeçalho forçado "ID do segurado" se estiver no início da string
+            const headerText = 'ID do segurado';
+            if (dataPart.startsWith(headerText)) {
+                dataPart = dataPart.substring(headerText.length).trim();
+            } else if (dataPart.startsWith(headerText.toUpperCase())) {
+                dataPart = dataPart.substring(headerText.toUpperCase().length).trim();
+            }
+            
+            // Remove qualquer outro cabeçalho não numérico no início se o restante for longo
+            if (removeHeader && dataPart.length > 0 && dataPart.length > ID_SEGURADO_LENGTH && !/^\d+$/.test(dataPart.substring(0, ID_SEGURADO_LENGTH))) {
+                // Tenta remover qualquer sequência não numérica no início
+                dataPart = dataPart.replace(/^[a-zA-Z\s,;._"]+/, '').trim(); // Adicionado " para limpeza
+            }
+
+            // Quebra a string em pedaços de ID_SEGURADO_LENGTH (17)
+            const bruteIds = [];
+            for (let i = 0; i < dataPart.length; i += ID_SEGURADO_LENGTH) {
+                const id = dataPart.substring(i, i + ID_SEGURADO_LENGTH).trim();
+                // Verifica se tem o tamanho correto e é numérico
+                if (id.length === ID_SEGURADO_LENGTH && /^\d+$/.test(id)) {
+                    bruteIds.push(id);
+                }
+            }
+            lines = bruteIds; // Usa a quebra forçada
+        } else {
+             // 3. Processa a quebra de linha normal (remoção do cabeçalho)
+            let dataLines = lines;
+            if (removeHeader && dataLines.length > 0) {
+                 // Heurística: Se a primeira linha não for puramente numérica, assuma que é um cabeçalho
+                 // Antes de testar, limpa as aspas (se a linha for '"ID do segurado"')
+                 const cleanedFirstLine = stripQuotes(dataLines[0].split(INPUT_DELIMITER)[0] || '');
+
+                 if (!/^\d+$/.test(cleanedFirstLine)) {
+                    dataLines = lines.slice(1);
+                 }
+            }
+            lines = dataLines;
+        }
+
+        return lines.filter(line => line.length > 0).map(line => stripQuotes(line)); // Aplica stripQuotes na linha final
+    }
+
+    /**
+     * Limpa o input TAB-delimitado. Tenta quebrar linhas usando o prefixo SF_RECORD_START se não houver \n.
+     */
+    function cleanTabDelimitedInput(input) {
+        const trimmedInput = input.trim();
+        let lines = trimmedInput.split('\n').filter(line => line.trim().length > 0);
+
+        // Se o input parece ser uma única linha contínua, tenta usar SF_RECORD_START para quebrar
+        if (lines.length <= 1 && trimmedInput.includes(SF_RECORD_START)) {
+            let dataPart = trimmedInput;
+            
+            // Remove o cabeçalho (a parte antes do primeiro SF_RECORD_START)
+            const firstRecordIndex = dataPart.indexOf(SF_RECORD_START);
+            if(firstRecordIndex > -1) {
+                dataPart = dataPart.substring(firstRecordIndex);
+            }
+            
+            // Substitui todas as ocorrências de SF_RECORD_START por \nSF_RECORD_START, exceto a primeira
+            dataPart = dataPart.replace(new RegExp(SF_RECORD_START, 'g'), '\n' + SF_RECORD_START);
+            
+            lines = dataPart.split('\n').filter(line => line.trim().length > 0);
+        }
+
+        // Se for colagem bruta, adiciona uma linha de cabeçalho "falsa" para o parser de colunas
+        if (lines.length > 0 && !lines[0].includes(INPUT_DELIMITER) && !lines[0].includes(SF_RECORD_START)) {
+             // Se o primeiro item não tem TAB nem SF_RECORD_START, é o cabeçalho
+            lines.unshift(SF_IGNORE_COLUMN + INPUT_DELIMITER + 'Name' + INPUT_DELIMITER + 'Id' + INPUT_DELIMITER + 'COD_CHAVE_EXT_CONTA__c');
+        } else if (lines.length > 0 && !lines[0].includes(INPUT_DELIMITER)) {
+            // Se foi feita a quebra por [BENEFICIARIO__c], a primeira linha é o cabeçalho original.
+            // Precisamos garantir que ele está na lista para o parser de colunas funcionar corretamente.
+             if (lines[0].toLowerCase().includes('name') && !lines[0].includes(INPUT_DELIMITER)) {
+                 // Tenta reconstruir o cabeçalho TAB-delimitado se for colagem bruta:
+                 lines[0] = lines[0].replace(new RegExp(SF_IGNORE_COLUMN, 'g'), SF_IGNORE_COLUMN + INPUT_DELIMITER);
+                 lines[0] = lines[0].replace(new RegExp('Name', 'g'), 'Name' + INPUT_DELIMITER);
+                 lines[0] = lines[0].replace(new RegExp('Id', 'g'), 'Id' + INPUT_DELIMITER);
+                 // O último campo não precisa de delimitador no final.
+             }
+        }
+        
+        return lines;
+    }
+
+    function generateQuery() {
+        const inputElement = document.getElementById('inputIds');
+        const input = inputElement.value;
+        if (!input.trim()) {
+            alert('Por favor, cole os IDs do segurado (do Passo 1) para gerar a query.');
+            return;
+        }
+
+        const dataLines = cleanAndExtractIds(input);
+        
+        const ids = dataLines.map(id => `'${id.toString()}'`); 
+        
+        if (ids.length === 0) {
+            alert('Nenhum ID válido encontrado para gerar a Query SOQL. Verifique se colou os IDs corretamente.');
+            return;
+        }
+
+        const idList = ids.join(',');
+        const query = `select Name, Id, COD_CHAVE_EXT_CONTA__c from BENEFICIARIO__c where Name in (${idList})`;
+
+        document.getElementById('outputQuery').value = query;
+        document.getElementById('idCountDisplay').textContent = `Total de IDs na Query: ${dataLines.length}`;
+        
+        document.getElementById('queryResultBox').classList.remove('hidden');
+        document.getElementById('idCountDisplay').classList.remove('hidden');
+        
+        // Ajuste de scroll para a caixa de input após o processamento (garantia extra)
+        inputElement.scrollTop = 0;
+    }
+
+    function processData() {
+        const orderedDataElement = document.getElementById('inputOriginal');
+        const salesforceDataElement = document.getElementById('inputSalesforce');
+        
+        const orderedDataText = salesforceDataElement.value;
+        const orderedDataOriginal = orderedDataElement.value; 
+        
+        document.getElementById('missingIdWarning').classList.add('hidden'); 
+        document.getElementById('finalCountDisplay').classList.add('hidden');
+
+        if (!orderedDataOriginal.trim()) {
+            alert('Por favor, cole a lista ORDENADA de IDs do segurado (Input Esquerdo/Original) para definir a ordem do resultado final.');
+            return;
+        }
+
+        if (!orderedDataText.trim()) {
+            alert('Por favor, cole o resultado do Salesforce (Input Direito).');
+            return;
+        }
+
+        // --- 1. Criar o mapa de dados do Salesforce (Lookup Table) ---
+        // Usa o parser adaptativo para quebrar as linhas do Salesforce
+        const sfLines = cleanTabDelimitedInput(orderedDataText); 
+        
+        if (sfLines.length < 2) {
+            alert('O resultado do Salesforce está incompleto ou sem dados.');
+            return;
+        }
+        
+        // Verifica se a colagem é TAB-separada ou bruta
+        const isTabSeparated = sfLines[0].includes(INPUT_DELIMITER) || sfLines.every(line => line.includes(INPUT_DELIMITER));
+        
+        // Aplica stripQuotes em cada item do cabeçalho
+        const sfHeader = sfLines[0].split(INPUT_DELIMITER).map(h => stripQuotes(h).trim()); // <-- AJUSTE AQUI
+        
+        // Determina se a coluna '_' está presente (índice 0)
+        const hasLeadingUnderscore = sfHeader.length > 0 && sfHeader[0] === SF_IGNORE_COLUMN;
+        
+        // Procura os índices das colunas no cabeçalho
+        const nameIndex = sfHeader.findIndex(h => h.toLowerCase() === 'name');
+        const idIndex = sfHeader.findIndex(h => h.toLowerCase() === 'id');
+        const codChaveIndex = sfHeader.findIndex(h => h.toLowerCase() === 'cod_chave_ext_conta__c');
+
+        if (nameIndex === -1 || idIndex === -1 || codChaveIndex === -1) {
+            alert('ERRO: Não foi possível encontrar as colunas "Name", "Id" e "COD_CHAVE_EXT_CONTA__c" no cabeçalho do Salesforce (Input Direito). Certifique-se de que colou os dados corretamente, incluindo a linha de cabeçalho.');
+            return;
+        }
+
+        const sfDataMap = {};
+        
+        for (let i = 1; i < sfLines.length; i++) {
+            const line = sfLines[i];
+            
+            let cols;
+            if (isTabSeparated) {
+                // Colagem normal (TAB-separada) - Aplica stripQuotes em cada coluna
+                cols = line.split(INPUT_DELIMITER).map(c => stripQuotes(c).trim()); // <-- AJUSTE AQUI
+            } else {
+                // COLAGEM BRUTA (Parser Forçado)
+                let rawData = line.replace(SF_RECORD_START, '').trim();
+                
+                // Se a linha começar com o ID a ignorar (ex: _), remove-o
+                if (hasLeadingUnderscore && rawData.startsWith(SF_IGNORE_COLUMN)) {
+                    rawData = rawData.substring(SF_IGNORE_COLUMN.length).trim();
+                }
+
+                // 1. ID do Segurado (Name): 17 dígitos
+                const seguradoId = rawData.substring(0, ID_SEGURADO_LENGTH);
+                rawData = rawData.substring(ID_SEGURADO_LENGTH);
+
+                // 2. Chave Externa (Id): 18 dígitos alfanuméricos
+                const chaveExterna = rawData.substring(0, ID_SF_LENGTH); 
+                rawData = rawData.substring(ID_SF_LENGTH);
+
+                // 3. AccountId (COD_CHAVE_EXT_CONTA__c): 18 dígitos alfanuméricos
+                const accountId = rawData.substring(0, ID_SF_LENGTH);
+                
+                // Cria as colunas na ordem que o cabeçalho original tab-separado teria (com _)
+                cols = hasLeadingUnderscore 
+                    ? [SF_IGNORE_COLUMN, seguradoId, chaveExterna, accountId]
+                    : [seguradoId, chaveExterna, accountId]; 
+            }
+            
+            // Mapeamento: Name (ID do Segurado) é a chave
+            if (cols.length > Math.max(nameIndex, idIndex, codChaveIndex)) {
+                
+                const seguradoId = (cols[nameIndex] || '').toString();
+                
+                if (seguradoId && seguradoId.length === ID_SEGURADO_LENGTH) {
+                    sfDataMap[seguradoId] = {
+                        chaveExterna: (cols[idIndex] || '').toString(),
+                        accountId: (cols[codChaveIndex] || '').toString(),
+                        seguradoId: seguradoId
+                    };
+                }
+            }
+        }
+
+        // --- 2. Determinar a ORDEM a partir do Input Original (já limpo) ---
+        // Usa o parser adaptativo de IDs de 17 dígitos
+        const orderedIds = cleanAndExtractIds(orderedDataOriginal);
+        
+        // --- 3. Gerar a Saída Final na Ordem Correta ---
+        const newHeader = [
+            'CHAVE_EXTERNA_BENEFICIARIO__c', 
+            'AccountId',
+            'ID do segurado'                    
+        ].join(OUTPUT_DELIMITER);
+
+        let finalOutput = newHeader + '\n';
+        
+        let missingCount = 0;
+        let generatedRows = 0;
+        
+        for (const id of orderedIds) {
+            const data = sfDataMap[id];
+            
+            if (data) {
+                // ID encontrado
+                const newLine = [
+                    data.chaveExterna,
+                    data.accountId,
+                    data.seguradoId
+                ].join(OUTPUT_DELIMITER);
+
+                finalOutput += newLine + '\n';
+            } else {
+                // ID NÃO encontrado: Simula #N/D
+                const newLine = [
+                    NOT_FOUND_VALUE,    
+                    NOT_FOUND_VALUE,    
+                    id    
+                ].join(OUTPUT_DELIMITER);
+
+                finalOutput += newLine + '\n';
+                missingCount++;
+            }
+            generatedRows++;
+        }
+
+        // 4. Exibir o resultado final e avisos
+        const outputFinalElement = document.getElementById('outputFinal');
+        outputFinalElement.value = finalOutput.trim();
+        outputFinalElement.scrollTop = 0; // Ajuste do scroll para o resultado
+
+        document.getElementById('finalResultBox').classList.remove('hidden');
+        document.getElementById('resultText').textContent = 'Resultado Final (Copiado na ORDEM da sua planilha original)';
+        
+        document.getElementById('finalCountDisplay').textContent = `Total de Linhas no Resultado: ${generatedRows}`;
+        document.getElementById('finalCountDisplay').classList.remove('hidden');
+
+        if (missingCount > 0) {
+            document.getElementById('missingIdWarning').classList.remove('hidden');
+        }
+
+        // Ajuste de scroll para as caixas de input após o processamento (garantia extra)
+        orderedDataElement.scrollTop = 0;
+        salesforceDataElement.scrollTop = 0;
+    }
+</script>
+
+</body>
+</html>
