@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Automatização - CSP Reset de Senha</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 30px; 
+            background-color: #e9eef2;
+        }
+        .container { 
+            max-width: 1000px;
+            margin: 0 auto; 
+            background-color: white; 
+            padding: 40px; 
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            border-top: 5px solid #0070d2;
+        }
+        h1 { 
+            color: #1a1a1a; 
+            font-size: 2.2em; 
+            margin-bottom: 5px;
+            text-align: center;
+        }
+        h2 { 
+            color: #6a6a6a; 
+            font-size: 1.2em; 
+            font-weight: 300;
+            border-bottom: 2px solid #e0e0e0; 
+            padding-bottom: 10px; 
+            margin-top: 0;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .tool-section {
+            min-height: 200px; 
+            padding: 10px;
+        }
+        /* ESTILOS ESPECÍFICOS DA NOVA FERRAMENTA */
+        .tool-group {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        textarea, .output-query {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            resize: vertical;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 0.95em;
+        }
+        .output-query {
+            background-color: #e8e8e8;
+            color: #000;
+            min-height: 60px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        button {
+            padding: 10px 18px;
+            font-size: 1em;
+            color: white;
+            background-color: #0070d2;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #005aa3;
+        }
+        .copy-button {
+            background-color: #28a745;
+        }
+        .copy-button:hover {
+            background-color: #1e7e34;
+        }
+        .text-area-readonly {
+            background-color: #fff3cd; /* Cor para destacar o texto padrão */
+            border: 1px solid #ffeeba;
+            color: #856404;
+            min-height: 100px;
+        }
+        .alert {
+            padding: 10px;
+            background-color: #ffdddd;
+            border: 1px solid #f44336;
+            color: #f44336;
+            margin-top: 10px;
+            border-radius: 4px;
+            display: none;
+        }
+        #idCount {
+            font-weight: 600;
+            color: #0070d2;
+            margin-bottom: 10px;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Automatização</h1>
+        <h2>Frente - CSP</h2>
+        
+        <div class="tool-section">
+
+            <div class="tool-group">
+                <h3>Gerador de Query SOQL para Reset de Senha</h3>
+                <label for="idList">Cole IDs (separados por linha, vírgula, espaço) ou a descrição completa do chamado:</label>
+                <textarea id="idList" rows="6" placeholder="Ex:&#10;43543543544993, 430980908098054, 094385049380584993, 100770099999 testeSula@hotmail.com"></textarea>
+                
+                <button onclick="generateQuery()">Gerar Query</button>
+                <div class="alert" id="errorAlert">Nenhum ID de usuário válido foi encontrado.</div>
+
+                <label for="generatedQuery" style="margin-top: 20px;">Query SOQL Gerada:</label>
+                <span id="idCount"></span>
+                <div id="generatedQuery" class="output-query"></div>
+                <button class="copy-button" onclick="copyQuery()" id="copyQueryBtn" disabled>Copiar Query</button>
+            </div>
+
+            <div class="tool-group">
+                <h3>Texto Padrão para Comunicação (Reset de Senha)</h3>
+                <label for="standardText">Texto para inserir no Salesforce/Email (conforme imagem):</label>
+                <textarea id="standardText" class="text-area-readonly" rows="5" readonly>Uma nova senha para o usuário a seguir foi enviada via email. O usuário receberá uma solicitação para inserir uma nova senha ao fazer o login inicial no salesforce.com.</textarea>
+                <button class="copy-button" onclick="copyStandardText()" id="copyStandardTextBtn">Copiar Texto Padrão</button>
+            </div>
+
+        </div>
+
+    </div>
+    <script>
+        const DOMAIN = '@sulamerica.com.br';
+
+        function sanitizeAndFormatIDs(input) {
+            let extractedIDs = [];
+
+            // 1. Limpa a entrada de caracteres de citação, vírgulas e nova linha, 
+            // substituindo todos por um único espaço. Isso unifica a separação.
+            const cleanedInput = input
+                .replace(/['";,\n\r]/g, ' ')
+                .replace(/\s+/g, ' ') // Substitui múltiplos espaços por um único
+                .trim();
+            
+            if (!cleanedInput) {
+                return [];
+            }
+
+            // 2. Divide a string limpa por espaço
+            const candidates = cleanedInput.split(' ').filter(id => id.length > 0);
+
+            // 3. Filtra os candidatos válidos (IDs) e ignora e-mails ou textos soltos.
+            // Um ID válido é qualquer coisa que:
+            // a) Comece com dígito E tenha entre 8 e 13 dígitos (IDs longos numéricos)
+            // OU
+            // b) Não contenha o caractere '@' (eliminando e-mails)
+            candidates.forEach(candidate => {
+                const isEmail = candidate.includes('@');
+                const isLongNumericId = candidate.match(/^\d{8,13}$/); // Exige que seja *apenas* números
+                
+                if (isLongNumericId || (!isEmail && candidate.length > 0)) {
+                    // Se for um ID numérico longo (descrição de chamado) OU
+                    // Se não for um e-mail (lista simples de IDs textuais/numéricos)
+                    extractedIDs.push(candidate);
+                }
+            });
+
+            if (extractedIDs.length === 0) {
+                return [];
+            }
+
+            // Remove duplicatas e formata
+            const uniqueIDs = [...new Set(extractedIDs)];
+            const formattedIDs = uniqueIDs.map(id => `'${id}${DOMAIN}'`);
+            
+            return formattedIDs;
+        }
+
+        function generateQuery() {
+            const idListInput = document.getElementById('idList').value;
+            const generatedQueryDiv = document.getElementById('generatedQuery');
+            const copyButton = document.getElementById('copyQueryBtn');
+            const errorAlert = document.getElementById('errorAlert');
+            const idCountSpan = document.getElementById('idCount');
+            
+            errorAlert.style.display = 'none';
+            idCountSpan.textContent = ''; // Limpa o contador inicialmente
+
+            const userList = sanitizeAndFormatIDs(idListInput);
+
+            if (userList.length === 0) {
+                // Se não houver IDs, gera a query com IN() vazio, mas exibe o alerta
+                const emptyQuery = `SELECT Id, Email, IsActive, Username\nFROM User\nWHERE Username IN();`;
+                generatedQueryDiv.textContent = emptyQuery; 
+                copyButton.disabled = false; 
+                errorAlert.style.display = 'block';
+                return;
+            }
+
+            const inClause = userList.join(',');
+            
+            // Query formatada exatamente como solicitado
+            const query = `SELECT Id, Email, IsActive, Username\nFROM User\nWHERE Username IN(${inClause});`;
+            
+            generatedQueryDiv.textContent = query;
+            copyButton.disabled = false;
+            
+            // Exibe a contagem de IDs
+            idCountSpan.textContent = `Total de IDs: ${userList.length}`;
+        }
+
+        function copyToClipboard(text, buttonId) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Feedback visual temporário para botões
+                const button = document.getElementById(buttonId);
+                if (button) {
+                    const originalText = button.textContent;
+                    button.textContent = 'Copiado!';
+                    
+                    setTimeout(() => {
+                        button.textContent = originalText;
+                    }, 1500);
+                }
+            }).catch(err => {
+                console.error('Falha ao copiar:', err);
+                alert('Erro ao copiar para a área de transferência. Tente novamente.');
+            });
+        }
+
+        function copyQuery() {
+            const query = document.getElementById('generatedQuery').textContent;
+            copyToClipboard(query, 'copyQueryBtn'); 
+        }
+
+        function copyStandardText() {
+            const text = document.getElementById('standardText').value;
+            copyToClipboard(text, 'copyStandardTextBtn');
+        }
+    </script>
+</body>
+</html>
