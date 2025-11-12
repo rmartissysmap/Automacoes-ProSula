@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Automatização - Biblioteca de Queries</title>
+    <style>
+        /* --- ESTILOS PADRÃO (SEU TEMPLATE) --- */
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 30px; 
+            background-color: #e9eef2;
+        }
+        .container { 
+            max-width: 1000px;
+            margin: 0 auto; 
+            background-color: white; 
+            padding: 40px; 
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            border-top: 5px solid #0070d2;
+        }
+        h1 { 
+            color: #1a1a1a; 
+            font-size: 2.2em; 
+            margin-bottom: 5px;
+            text-align: center;
+        }
+        h2 { 
+            color: #6a6a6a; 
+            font-size: 1.2em; 
+            font-weight: 300;
+            border-bottom: 2px solid #e0e0e0; 
+            padding-bottom: 10px; 
+            margin-top: 0;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .tool-section {
+            padding: 10px;
+        }
+        
+        /* --- ESTILOS ESPECÍFICOS: MURAL BONITO --- */
+        
+        /* Layout de Colunas Principais (Queries + JIRA) */
+        .grid-layout {
+            display: grid;
+            grid-template-columns: 2fr 1fr; /* Queries (2/3) e JIRA (1/3) */
+            gap: 30px;
+            margin-top: 20px;
+        }
+        
+        /* Estilo para os Cards/Caixas */
+        .card {
+            background-color: #ffffff;
+            padding: 25px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            height: 100%; 
+            box-sizing: border-box;
+            margin-bottom: 20px; 
+        }
+        
+        /* Título da Seção de Queries/Documentação */
+        .tool-section h3 { 
+            color: #0070d2; 
+            margin-top: 0; 
+            margin-bottom: 20px; 
+            border-bottom: none;
+            padding-bottom: 0;
+            font-size: 1.5em;
+        }
+
+        /* Título dos Cards menores (Documentação) */
+        .tool-section h4 {
+            color: #333;
+            font-size: 1.2em;
+            margin-top: 0;
+            margin-bottom: 15px;
+            padding-bottom: 5px;
+            border-bottom: 1px dashed #eee;
+        }
+        
+        label { 
+            display: block; 
+            margin-bottom: 8px; 
+            font-weight: 600; 
+            color: #333; 
+        }
+        
+        /* Estilo do Dropdown (Select) */
+        select#querySelector {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 1em;
+            background-color: #fcfcfc;
+            margin-bottom: 20px;
+        }
+
+        /* Estilo da área de output da Query e campos de cópia (AGORA CLARO) */
+        textarea#queryOutput, 
+        input.copy-field { 
+            width: 100%;
+            height: 250px; /* Mantido para textarea */
+            padding: 15px;
+            box-sizing: border-box;
+            border: 1px solid #ddd; /* Borda mais suave */
+            background-color: #f9f9f9; /* Fundo cinza bem claro */
+            color: #333; /* Texto cinza escuro para contraste */
+            border-radius: 4px;
+            font-family: Consolas, monospace;
+            font-size: 14px;
+            margin-bottom: 0;
+            white-space: pre;
+            resize: vertical;
+        }
+        
+        /* Altura específica para o campo de cópia do nome/link */
+        input.copy-field {
+            height: auto; 
+            padding: 10px 15px;
+            margin-bottom: 10px;
+        }
+        
+        /* Flexbox para os botões de cópia da query principal */
+        .copy-container { 
+            display: flex; 
+            justify-content: flex-start; 
+            align-items: center; 
+            margin-top: 15px; 
+            margin-bottom: 0;
+        }
+        /* Container de cópia dos docs */
+        .copy-doc-container {
+            display: flex;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        /* Estilo para status de cópia */
+        .copy-status { 
+            font-weight: bold; 
+            color: #28a745;
+            margin-left: 15px; 
+            opacity: 0; 
+            transition: opacity 0.5s; 
+        }
+        .copy-button { 
+            padding: 10px 20px; 
+            background-color: #28a745;
+            color: white; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            font-size: 15px; 
+            font-weight: bold;
+            transition: background-color 0.3s, transform 0.1s; 
+        }
+        .copy-button:hover { 
+            background-color: #1e7e34;
+            transform: translateY(-1px);
+        }
+
+        /* Seção de Links e Documentos (Estilo Padrão para Listas) */
+        .doc-list {
+            list-style: none;
+            padding-left: 0;
+            margin: 0;
+        }
+        .doc-list a {
+            text-decoration: none;
+            color: #0070d2;
+            font-weight: 500;
+            display: block;
+            padding: 5px 0;
+        }
+        .doc-list a:hover {
+            color: #005a9c;
+            text-decoration: underline;
+        }
+        
+        /* Divisor */
+        .divider-full {
+            margin: 30px 0;
+            border: 0;
+            border-top: 2px solid #e0e0e0;
+        }
+
+        /* Media Query para telas menores */
+        @media (max-width: 768px) {
+            .grid-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Automatização</h1>
+        <h2>Frente - CSP</h2>
+        
+        <div class="tool-section">
+            
+            <div class="grid-layout">
+                
+                <div class="card">
+                    <h3>🛠️ Biblioteca de Queries (SOQL)</h3>
+
+                    <label for="querySelector">1. Selecione a query desejada:</label>
+                    <select id="querySelector" onchange="loadQuery()">
+                        <option value="">-- Escolha uma query --</option>
+                        <option value="resetUser">1. Reset de Senha (User)</option>
+                        <option value="duplicidadeConta">2. Duplicidade de Conta (Account)</option>
+                        <option value="permissaoUsuario">3. Permissão do Usuário</option>
+                        <option value="gruposUsuario">4. Grupos do Usuário</option>
+                        <option value="exclusaoServicos">5. Exclusão de Serviços Eliminados</option>
+                        <option value="valoresNegociadosMCP">6. Verificar Valores Negociados MCP (Longa)</option>
+                        <option value="resetRede">7. Reset de Senha (REDE_PRESTADOR__c)</option>
+                        <option value="verificarEndereco">8. Verificar Endereço</option>
+                        <option value="transfContato">9. Transferência: Contato</option>
+                        <option value="transfManutencao">10. Transferência: Manutenção Cadastros</option>
+                        <option value="transfServico">11. Transferência: Serviço Prestador</option>
+                        <option value="transfEspecialidade">12. Transferência: Especialidade Prestador</option>
+                        <option value="transfCorpoClinico">13. Transferência: Corpo Clínico</option>
+                    </select>
+                    
+                    <label for="queryOutput">2. Código SOQL (Pronto para copiar):</label>
+                    <textarea id="queryOutput" readonly placeholder="Selecione uma query no menu acima. O código SOQL aparecerá aqui."></textarea>
+
+                    <div class="copy-container">
+                        <button class="copy-button" onclick="copyQuery('queryOutput', 'copyStatus')">Copiar Query</button>
+                        <span id="copyStatus" class="copy-status">Copiado!</span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>🔗 Tickets de Referência (JIRA)</h3>
+                    <ul class="doc-list">
+                        <li><a href="https://sulamerica.atlassian.net/browse/SAUD-156109" target="_blank">SAUD-156109</a></li>
+                        <li><a href="https://sulamerica.atlassian.net/browse/SAUD-156106" target="_blank">SAUD-156106</a></li>
+                        <li><a href="https://sulamerica.atlassian.net/browse/SAUD-156105" target="_blank">SAUD-156105</a></li>
+                        <li><a href="https://sulamerica.atlassian.net/browse/SAUD-155594" target="_blank">SAUD-155594</a></li>
+                        <li><a href="https://sulamerica.atlassian.net/browse/SAUD-155419" target="_blank">SAUD-155419</a></li>
+                        <li><a href="https://sulamerica.atlassian.net/browse/SAUD-155095" target="_blank">SAUD-155095</a></li>
+                        <li><a href="https://sulamerica.atlassian.net/browse/SAUD-155061" target="_blank">SAUD-155061</a></li>
+                        <li><a href="https://sulamerica.atlassian.net/browse/SAUD-155020" target="_blank">SAUD-155020</a></li>
+                        <li><a href="https://sulamerica.atlassian.net/browse/SAUD-154576" target="_blank">SAUD-154576</a></li>
+                        <li><a href="https://sulamerica.atlassian.net/browse/SAUD-154063" target="_blank">SAUD-154063</a></li>
+                        <li><a href="https://sulamerica.atlassian.net/browse/SAUD-154022" target="_blank">SAUD-154022</a></li>
+                    </ul>
+                </div>
+                
+            </div>
+            
+            <hr class="divider-full">
+            
+            <h3>📚 Documentação e Arquivos Úteis</h3>
+
+            <div class="card">
+                <h4>Criar Usuários</h4>
+                
+                <p>
+                    Clique para abrir: 
+                    <a href="https://sulamericasas-my.sharepoint.com/:x:/g/personal/mateus_jonas_sulamerica_com_br/Eb6H8SJuYptCpx7vY-UndCcB00pcFyeK0nehjHP6Y3BCmA?e=M6baXe" target="_blank" style="font-weight: bold; color: #0070d2;">
+                        Planilha de Criação de Usuários
+                    </a>
+                </p>
+
+                <label for="userCreationLink">Link Completo (Pronto para Copiar):</label>
+                <input type="text" id="userCreationLink" class="copy-field" readonly value="https://sulamericasas-my.sharepoint.com/:x:/g/personal/mateus_jonas_sulamerica_com_br/Eb6H8SJuYptCpx7vY-UndCcB00pcFyeK0nehjHP6Y3BCmA?e=M6baXe">
+
+                <div class="copy-doc-container">
+                    <button class="copy-button" onclick="copyQuery('userCreationLink', 'copyStatusLink')">Copiar Link</button>
+                    <span id="copyStatusLink" class="copy-status">Copiado!</span>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h4>Acessos a ListView Case</h4>
+
+                <p>
+                    Clique para abrir: 
+                    <a href="https://sulamericasas-my.sharepoint.com/:x:/g/personal/mateus_jonas_sulamerica_com_br/ETOdTBr9lrJKlo2x6t6WQHMBOvU1zq842HGV-Mva2e7Hhg?e=dQShFi" target="_blank" style="font-weight: bold; color: #0070d2;">
+                        Modo de Exibição (1).xlsx
+                    </a>
+                </p>
+
+                <label for="listViewAccessLink">Link Completo (Pronto para Copiar):</label>
+                <input type="text" id="listViewAccessLink" class="copy-field" readonly value="https://sulamericasas-my.sharepoint.com/:x:/g/personal/mateus_jonas_sulamerica_com_br/ETOdTBr9lrJKlo2x6t6WQHMBOvU1zq842HGV-Mva2e7Hhg?e=dQShFi">
+
+                <div class="copy-doc-container">
+                    <button class="copy-button" onclick="copyQuery('listViewAccessLink', 'copyStatusAccess')">Copiar Link</button>
+                    <span id="copyStatusAccess" class="copy-status">Copiado!</span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // --- BIBLIOTECA DE QUERIES (SOQL) ---
+        const queryLibrary = {
+            'resetUser': `
+SELECT Id, Email, IsActive, Username 
+FROM User 
+WHERE Username IN();
+`.trim(),
+
+            'duplicidadeConta': `
+SELECT id 
+FROM Account 
+WHERE CNPJ__c = '' AND id <> 'ID_da_CONTA';
+`.trim(),
+
+            'permissaoUsuario': `
+SELECT Id, PermissionSetId, PermissionSet.Name, AssigneeId 
+FROM PermissionSetAssignment 
+WHERE AssigneeId = 'ID_DO_USUARIO';
+`.trim(),
+
+            'gruposUsuario': `
+SELECT Group.Name 
+FROM GroupMember 
+WHERE UserOrGroupId = 'ID_DO_USUARIO' AND Group.Type <> 'Queue';
+`.trim(),
+
+            'exclusaoServicos': `
+SELECT Id 
+FROM SERVICO_PRESTADOR__c 
+WHERE COD_PRESTADOR__c = 'ID_da_CONTA' 
+  AND COD_MANUT_CAD_PREST_INC__c = NULL 
+  AND COD_MANUT_CAD_PRESTADOR__c = NULL;
+`.trim(),
+
+            'valoresNegociadosMCP': `
+SELECT 
+    rn.id, 
+    rn.DSC_NOME__c,
+    rn.COD_MANUT_CAD_PRESTADOR__r.COD_ACCOUNT__c,
+    rn.FLG_CARTEIRA_ADM__c, 
+    rn.FLG_CARTEIRA_PME__c, 
+    rn.FLG_CARTEIRA_GRUPAL__c, 
+    rn.FLG_CARTEIRA_IND__c,
+    rn.FLG_APARTAMENTO__c,
+    rn.FLG_ENFERMARIA__c,
+    rn.IDC_TIPO_VALORIZACAO__c,
+    rn.VALOR__c,
+    rn.FLG_INTERNADO__c,
+    rn.DSC_COMENTARIO__c,
+    rn.FLG_AMBULATORIO__c,
+    rn.FLG_DAY_HOSPITAL__c,
+    rn.FLG_PRONTO_SOCORRO__c,
+    rn.FLG_REGRA_TIPO_ATEND__c,
+    rn.FLG_IMPACTO_CARTEIRA_IND__c,
+    rn.FLG_IMPACTO_CARTEIRA_COL__c,
+    rn.DSC_CARTEIRAS_VINCSF__c,
+    (SELECT 
+        csp.COD_SERVICO_PREST__r.COD_SERVICO__r.Name,
+        csp.COD_SERVICO_PREST__r.COD_SERVICO__r.FN_COD_SERVICO__c,
+        csp.COD_SERVICO_PREST__r.COD_SERVICO__c,
+        csp.COD_SERVICO_PREST__r.COD_SERVICO__r.FRM_SERV_PAC__c,
+        csp.COD_SERVICO_PREST__r.COD_SERVICO__r.FLG_QUEBRA_ACOMODACAO__c,
+        csp.COD_SERVICO_PREST__r.COD_SERVICO__r.IDC_ORIGEM_SERV__c,
+        csp.COD_SERVICO_PREST__r.COD_SERVICO__r.DSC_TIPO_CONTRATACAO__c,
+        csp.VAL_INDIVIDUAL__c,
+        csp.VAL_COLETIVO__c,
+        csp.VALOR_BENCHMARKING__c,
+        csp.VALOR_BENCHMARKING_COLETIVO__c,
+        csp.VLR_COLETIVO_APARTAMENTO__c,
+        csp.VLR_COLETIVO_ENFERMARIA__c,
+        csp.VLR_INDIVIDUAL_APARTAMENTO__c,
+        csp.VLR_INDIVIDUAL_ENFERMARIA__c,
+        csp.VAL_INDIVIDUAL_NEGOCIADO__c,
+        csp.VAL_COLETIVO_NEGOCIADO__c,
+        csp.QTD_SERV_ESPEC__c,
+        csp.VLR_INDIVIDUAL_CALCULADO__c,
+        csp.VLR_COLETIVO_CALCULADO__c,
+        csp.VAL_INDIVIDUAL_APARTAMENTO__c,
+        csp.VAL_INDIVIDUAL_ENFERMARIA__c,
+        csp.VAL_COLETIVO_APARTAMENTO__c,
+        csp.VAL_COLETIVO_ENFERMARIA__c,
+        csp.VAL_BENCH_COL_APT__c,
+        csp.VAL_BENCH_COL_ENF__c,
+        csp.VAL_BENCH_IND_APT__c,
+        csp.VAL_BENCH_IND_ENF__c
+    FROM Regras_Negocia_es_X_Servi_os_Ext__r csp
+    WHERE csp.COD_SERVICO_PREST__r.IDC_STATUS__c != 'Eliminado'
+    ORDER BY csp.COD_SERVICO_PREST__r.COD_SERVICO__r.Name),
+    (SELECT 
+        cep.FRM_NOME_ESPECIALIDADES__c,
+        cep.COD_ESPECIALIDADE_PREST__r.COD_ESPECIALIDADE__r.FN_COD_ESPECIALIDADE__c,
+        cep.COD_ESPECIALIDADE_PREST__r.COD_ESPECIALIDADE__r.Id
+    FROM Regras_Negociacoes_X_Especialidades__r cep
+    ORDER BY cep.FRM_NOME_ESPECIALIDADES__c),
+    (SELECT 
+        pses.COD_ESPEC_PREST__r.COD_ESPECIALIDADE__r.Name,
+        pses.COD_ESPEC_PREST__r.COD_ESPECIALIDADE__r.FN_COD_ESPECIALIDADE__c,
+        pses.COD_SERV_PREST__r.COD_SERVICO__r.Name,
+        pses.COD_SERV_PREST__r.COD_SERVICO__r.FN_COD_SERVICO__c,
+        pses.COD_SERV_PREST__r.COD_SERVICO__r.FRM_SERV_PAC__c,
+        pses.COD_SERV_PREST__r.VAL_INDIVIDUAL__c,
+        pses.COD_SERV_PREST__r.VAL_COLETIVO__c,
+        pses.COD_ESPEC_PREST__r.COD_ESPECIALIDADE__r.Id,
+        pses.COD_SERV_PREST__r.VALOR_BENCHMARKING__c,
+        pses.COD_SERV_PREST__r.VALOR_BENCHMARKING_COLETIVO__c,
+        pses.COD_SERV_PREST__r.VAL_INDIVIDUAL_NEGOCIADO__c,
+        pses.COD_SERV_PREST__r.VAL_COLETIVO_NEGOCIADO__c
+    FROM Regra_Negocia_es_X_Especs_Servicos__r pses
+    ORDER BY pses.COD_ESPEC_PREST__r.COD_ESPECIALIDADE__r.Name),
+    (SELECT 
+        prp.id,
+        prp.COD_PREST_LOC_ESPEC__c,
+        prp.COD_PREST_LOC_ESPEC__r.COD_PLANO_REDE__r.FRM_COD_TIPO_PRODUTO__c,
+        prp.COD_PREST_LOC_ESPEC__r.COD_PLANO_REDE__r.FR
+    FROM Regra_Negociacao_X_Plano_Rede__r prp
+    WHERE prp.COD_PREST_LOC_ESPEC__r.COD_PLANO_REDE__r.FLG_ATIVO__c = TRUE)
+FROM Regra_Negociacao__c rn
+WHERE rn.COD_MANUT_CAD_PRESTADOR__r.COD_ACCOUNT__c = 'ID_DA_CONTA_DA_MCP'
+`.trim(),
+
+            'resetRede': `
+SELECT Id, ATUACAO__c
+FROM REDE_PRESTADOR__c
+WHERE ATUACAO__r.CODIGO_DO_PRESTADOR__c = '5699359|PRS'
+`.trim(),
+
+            'verificarEndereco': `
+SELECT Id, TIPO__c, CONTA__c, CreatedDate 
+FROM ENDERECO_RELACIONADO__c 
+WHERE CONTA__c = 'ID_CONTA' and TIPO__c in('CORRESPONDENCIA','Atendimento') 
+ORDER BY CreatedDate asc
+`.trim(),
+
+            'transfContato': `
+SELECT Id, AccountId 
+FROM Contact 
+WHERE AccountId = 'IDCONTACORRETA'
+`.trim(),
+
+            'transfManutencao': `
+SELECT id 
+FROM MANUTENCAO_CADASTROS_PRESTADOR__c 
+WHERE COD_ACCOUNT__c = 'IDCONTACORRETA'
+`.trim(),
+
+            'transfServico': `
+SELECT Id 
+FROM SERVICO_PRESTADOR__c 
+WHERE COD_ATUACAO__c = 'IdATUCAOCORRETA' and COD_PRESTADOR__c = 'IDCONTACORRETA'
+`.trim(),
+
+            'transfEspecialidade': `
+SELECT Id 
+FROM ESPECIALIDADE_PRESTADOR__c 
+WHERE COD_ATUACAO__c = 'IdATUCAOCORRETA' and COD_ACCOUNT__c = 'IDCONTACORRETA'
+`.trim(),
+
+            'transfCorpoClinico': `
+SELECT Id 
+FROM Corpo_Clinico__c 
+WHERE ATUACAO__c = 'IdATUCAOCORRETA' and COD_ACCOUNT__c = 'IDCONTACORRETA'
+`.trim()
+        };
+
+        function loadQuery() {
+            const selector = document.getElementById('querySelector');
+            const outputArea = document.getElementById('queryOutput');
+            const copyStatus = document.getElementById('copyStatus');
+            const queryKey = selector.value;
+
+            if (queryKey && queryLibrary[queryKey]) {
+                outputArea.value = queryLibrary[queryKey];
+            } else {
+                outputArea.value = "Selecione uma query no menu acima. O código SOQL aparecerá aqui.";
+            }
+            
+            // Reseta status de cópia principal
+            copyStatus.style.opacity = 0;
+        }
+        
+        // Função de cópia UNIFICADA para Query, Link e Arquivos
+        function copyQuery(elementId, statusId) {
+            const element = document.getElementById(elementId);
+            const copyStatus = document.getElementById(statusId);
+            const isQueryArea = elementId === 'queryOutput';
+            const selectedValue = document.getElementById('querySelector').value;
+
+            // Validação específica para o dropdown de queries
+            if (isQueryArea && (!selectedValue || element.value.trim() === '' || element.value.includes('Selecione uma query'))) {
+                alert('Por favor, selecione uma query válida no menu antes de copiar.');
+                return;
+            }
+
+            // API Moderna de Clipboard
+            navigator.clipboard.writeText(element.value).then(() => {
+                // Sucesso
+                copyStatus.style.opacity = 1; 
+                setTimeout(() => {
+                    copyStatus.style.opacity = 0; 
+                }, 1500);
+            }).catch(err => {
+                // Fallback para execCommand
+                console.warn('Falha ao usar API de Clipboard. Tentando fallback...');
+                try {
+                    element.select(); // Seleciona o texto
+                    document.execCommand('copy'); // Copia
+                    copyStatus.textContent = 'Copiado (fallback)!';
+                    copyStatus.style.opacity = 1;
+                    setTimeout(() => {
+                        copyStatus.style.opacity = 0;
+                        copyStatus.textContent = 'Copiado!'; 
+                    }, 1500);
+                } catch (e) {
+                    alert('Falha ao copiar. Copie manualmente o texto: ' + element.value);
+                    console.error('Falha no fallback de cópia: ', e);
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', loadQuery); 
+    </script>
+</body>
+</html>
