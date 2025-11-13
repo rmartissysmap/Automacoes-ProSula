@@ -38,6 +38,7 @@
         const passwordInput = document.getElementById('cpfInput');
         const accessButton = document.getElementById('accessButton');
         const cancelButton = document.getElementById('cancelButton');
+        const userNameSelect = document.getElementById('userNameSelect');
 
         modalTitle.textContent = title;
         modalMessage.innerHTML = message;
@@ -46,8 +47,16 @@
         // Esconde o campo de senha
         passwordGroup.style.display = 'none';
 
+        // Mostra o select APENAS se for um modal de login
+        if (title.includes('Bem-vindo') || title.includes('Reautenticação')) {
+            userNameSelect.style.display = 'block';
+        } else {
+            userNameSelect.style.display = 'none';
+        }
+
         if (isConfirm) {
             accessButton.textContent = 'Confirmar';
+            accessButton.style.width = 'calc(50% - 5px)';
             accessButton.onclick = () => {
                 modal.style.display = 'none';
                 if (callback) callback(true);
@@ -59,6 +68,7 @@
             };
         } else {
             accessButton.textContent = 'OK';
+            accessButton.style.width = '100%'; // Botão OK ocupa espaço total
             accessButton.onclick = () => {
                 modal.style.display = 'none';
                 if (callback) callback();
@@ -73,6 +83,9 @@
     async function initializeFirebase() {
         try {
             // setLogLevel('debug'); // Usar para debug
+            if (!firebaseConfig || Object.keys(firebaseConfig).length === 0) {
+                 throw new Error("Configuração do Firebase não encontrada.");
+            }
             app = initializeApp(firebaseConfig);
             db = getFirestore(app);
             auth = getAuth(app);
@@ -85,7 +98,7 @@
             }
         } catch (error) {
             console.error("Erro na inicialização ou autenticação do Firebase:", error);
-            showModal('Erro Crítico', `Falha ao conectar ao servidor. Por favor, tente novamente.`, false);
+            showModal('Erro Crítico', `Falha ao conectar ao servidor. Verifique se o app está no ambiente correto.<br><small>(${error.message})</small>`, false);
         }
     }
 
@@ -93,11 +106,11 @@
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 USER_ID = user.uid;
-                await loadUserList();
-                restoreLogin(); 
+                await loadUserList(); // Busca usuários
+                // restoreLogin() será chamado de dentro do loadUserList (via renderUserDropdown)
             } else {
                 // Caso não haja usuário autenticado, exibe o modal de login
-                document.getElementById('authModal').style.display = 'flex';
+                showModal('Bem-vindo(a) à Gestão de Automações', 'Por favor, selecione seu nome completo para começar:', false, authenticateUser);
             }
         });
     }
@@ -106,22 +119,28 @@
         // A coleção de usuários agora é a mesma usada em `gestao_usuarios.html`
         const usersCollectionRef = collection(db, `artifacts/${appId}/public/data/app_users`);
         
-        // Inicialização de usuários padrão se a coleção estiver vazia
-        const snapshot = await getDocs(usersCollectionRef);
-        if (snapshot.empty) {
-            console.log("Inicializando lista de usuários padrão...");
-            for (const name of DEFAULT_USERS) {
-                const isPowerUser = name === 'Renan Martins' || name === 'ADM';
-                
-                // Cria o ID do documento baseado no nome (igual ao gestao_usuarios.html)
-                const docId = name.toUpperCase().replace(/\s/g, '_');
+        try {
+            // Inicialização de usuários padrão se a coleção estiver vazia
+            const snapshot = await getDocs(usersCollectionRef);
+            if (snapshot.empty) {
+                console.log("Inicializando lista de usuários padrão...");
+                for (const name of DEFAULT_USERS) {
+                    const isPowerUser = name === 'Renan Martins' || name === 'ADM';
+                    
+                    // Cria o ID do documento baseado no nome (igual ao gestao_usuarios.html)
+                    const docId = name.toUpperCase().replace(/\s/g, '_');
 
-                await setDoc(doc(usersCollectionRef, docId), {
-                    name: formatName(name),
-                    isPowerUser: isPowerUser
-                });
+                    await setDoc(doc(usersCollectionRef, docId), {
+                        name: formatName(name),
+                        isPowerUser: isPowerUser
+                    });
+                }
             }
+        } catch(err) {
+            console.error("Erro ao inicializar usuários: ", err);
+            showModal('Erro de Inicialização', 'Não foi possível carregar a lista de usuários padrão.', false);
         }
+
 
         // Snapshot Listener para a lista de usuários
         onSnapshot(usersCollectionRef, (snapshot) => {
@@ -129,7 +148,8 @@
             snapshot.forEach(doc => {
                 USER_LIST.push(doc.data());
             });
-            renderUserDropdown(USER_LIST);
+            renderUserDropdown(USER_LIST); // <--- RENDERIZA OS NOMES
+            restoreLogin(); // <--- TENTA RESTAURAR O LOGIN DEPOIS QUE OS NOMES EXISTEM
         }, (error) => {
             console.error("Erro ao carregar lista de usuários:", error);
             showModal('Erro de Sincronização', 'Não foi possível carregar a lista de usuários. Recarregue a página.', false);
@@ -140,7 +160,7 @@
         const select = document.getElementById('userNameSelect');
         const lastUser = localStorage.getItem('lastUser');
         
-        select.innerHTML = '<option value="" disabled selected>Selecione seu nome</option>';
+        select.innerHTML = '<option value="" disabled>Selecione seu nome</option>';
         
         // Garante que a lista de usuários está em ordem alfabética para melhor UX
         const sortedUsers = [...users].sort((a, b) => a.name.localeCompare(b.name));
@@ -154,6 +174,11 @@
             }
             select.appendChild(option);
         });
+
+        // Se o lastUser não foi encontrado, força o "Selecione seu nome"
+        if (!lastUser || !users.find(u => u.name === lastUser)) {
+             select.selectedIndex = 0;
+        }
         
         // Dispara a checagem se o último usuário selecionado é um Power User
         if (lastUser) {
@@ -183,6 +208,8 @@
 
         if (!selectedName) {
             showModal('Acesso Negado', 'Por favor, selecione seu nome para continuar.', false);
+            // Re-exibe o modal de login se fechar o de erro
+            restoreLogin();
             return;
         }
 
@@ -190,7 +217,7 @@
 
         if (requiresPassword) {
             if (passwordInput.toLowerCase() !== AUTHORIZED_PASSWORD) {
-                showModal('Acesso Negado', 'Senha incorreta.', false);
+                showModal('Acesso Negado', 'Senha incorreta.', false, restoreLogin);
                 return;
             }
         }
@@ -209,6 +236,11 @@
     }
     
     function restoreLogin() {
+        // Se já estiver logado (CURRENT_USER definido), não faz nada
+        if(CURRENT_USER) {
+            return;
+        }
+
         const lastUser = localStorage.getItem('lastUser');
         if (lastUser) {
             // Tenta simular o login para um usuário existente
@@ -219,15 +251,13 @@
                 
                 // Se for power user, forçamos a reautenticação (para inserir senha)
                 if (IS_POWER_USER) {
-                    document.getElementById('authModal').style.display = 'flex';
-                    document.getElementById('modalTitle').textContent = 'Reautenticação Necessária';
-                    document.getElementById('modalMessage').innerHTML = `Seu usuário (${CURRENT_USER}) requer a senha para acesso completo.`;
+                    showModal('Reautenticação Necessária', `Seu usuário (${CURRENT_USER}) requer a senha para acesso completo.`, false, authenticateUser);
+                    document.getElementById('userNameSelect').value = CURRENT_USER;
                     document.getElementById('cpfInputGroup').style.display = 'block';
-                    document.getElementById('accessButton').onclick = authenticateUser;
-                    document.getElementById('cancelButton').style.display = 'none';
                     return;
                 }
                 
+                // Login automático se não for power user
                 document.getElementById('authModal').style.display = 'none';
                 document.getElementById('mainContent').style.display = 'block';
                 document.getElementById('solicitanteInput').value = CURRENT_USER;
@@ -236,12 +266,9 @@
                 return;
             }
         }
+
         // Se não houver usuário ou o usuário for inválido, exibe o modal de login padrão
-        document.getElementById('authModal').style.display = 'flex';
-        document.getElementById('modalTitle').textContent = 'Bem-vindo(a) à Gestão de Automações';
-        document.getElementById('modalMessage').innerHTML = 'Por favor, selecione seu nome completo para começar:';
-        document.getElementById('accessButton').onclick = authenticateUser;
-        document.getElementById('cancelButton').style.display = 'none';
+        showModal('Bem-vindo(a) à Gestão de Automações', 'Por favor, selecione seu nome completo para começar:', false, authenticateUser);
     }
 
 
@@ -290,9 +317,10 @@
 
     // --- FIREBASE CRUD E LISTENER ---
 
+    // CORREÇÃO: MUDANÇA PARA O CAMINHO PÚBLICO/COMPARTILHADO
     function getAutomationCollectionRef() {
-        // Caminho privado por usuário (melhor para solicitações individuais)
-        return collection(db, `artifacts/${appId}/users/${USER_ID}/automation_requests`);
+        // Caminho público para que todos (Renan, Diego, etc.) vejam as mesmas solicitações
+        return collection(db, `artifacts/${appId}/public/data/automation_requests`);
     }
 
     let unsubscribeRequests = null;
@@ -316,7 +344,9 @@
             // Ordena as solicitações: Em Processo e Backlog primeiro, Finalizado por último.
             requests.sort((a, b) => {
                 const statusOrder = { 'Em Processo': 1, 'Backlog': 2, 'Finalizado': 3 };
-                return statusOrder[a.status] - statusOrder[b.status];
+                const statusA = statusOrder[a.status] || 99;
+                const statusB = statusOrder[b.status] || 99;
+                return statusA - statusB;
             });
             
             renderTable(requests);
@@ -333,8 +363,10 @@
         if (date.seconds) { // Firestore Timestamp
             return new Date(date.seconds * 1000).toLocaleDateString('pt-BR');
         }
-        if (typeof date === 'string' && date.includes('/')) return date;
-        const d = new Date(date);
+        if (typeof date === 'string' && date.includes('/')) return date; // Já formatado
+        
+        const d = new Date(date); // Tenta formatar string ISO
+        if (isNaN(d.getTime())) return '-'; // Data inválida
         return d.toLocaleDateString('pt-BR');
     }
     
@@ -350,7 +382,7 @@
             return;
         }
 
-        requests.forEach((req, index) => {
+        requests.forEach((req) => {
             const tr = document.createElement('tr');
             
             // Título (Editável por todos)
@@ -420,17 +452,18 @@
     
     function createStatusCell(req, docId, canEdit) {
         const statusCell = document.createElement('td');
-        const statusClass = `status-${req.status.toLowerCase().replace(' ', '-')}`;
+        const status = req.status || 'Backlog'; // Garante um status padrão
+        const statusClass = `status-${status.toLowerCase().replace(' ', '-')}`;
 
         if (canEdit) {
             const select = document.createElement('select');
             select.className = `status-select ${statusClass}`;
             
-            STATUSES.forEach(status => {
+            STATUSES.forEach(statusOpt => {
                 const option = document.createElement('option');
-                option.value = status;
-                option.textContent = status;
-                if (req.status === status) {
+                option.value = statusOpt;
+                option.textContent = statusOpt;
+                if (status === statusOpt) {
                     option.selected = true;
                 }
                 select.appendChild(option);
@@ -444,7 +477,7 @@
 
         } else {
             const span = document.createElement('span');
-            span.textContent = req.status;
+            span.textContent = status;
             span.className = `status-display ${statusClass}`; 
             statusCell.appendChild(span);
         }
@@ -464,8 +497,20 @@
             cell.setAttribute('contenteditable', 'true');
             cell.textContent = fileLink || 'Adicionar link...';
             
+            cell.onfocus = (e) => {
+                if (e.target.textContent === 'Adicionar link...') {
+                    e.target.textContent = '';
+                }
+            };
+            
             cell.onblur = (e) => {
-                updateRequest(docId, 'fileLink', e.target.textContent);
+                let newText = e.target.textContent.trim();
+                if (newText === '') {
+                    e.target.textContent = 'Adicionar link...';
+                    updateRequest(docId, 'fileLink', '');
+                } else if (newText !== fileLink) {
+                    updateRequest(docId, 'fileLink', newText);
+                }
             };
             
         // Se NÃO for Power User (Visualização Clicável)
@@ -527,6 +572,9 @@
             showModal('Erro de Dados', 'Não foi possível adicionar a solicitação.', false);
         }
     }
+    // Expondo a função globalmente para o onclick do HTML
+    window.addSolicitacao = addSolicitacao;
+
 
     async function updateRequest(docId, field, value) {
         if (!db || !USER_ID) return;
@@ -580,7 +628,8 @@
     }
     
     // Função para abrir a nova página de gestão de usuários
-    function openUserManagement() {
+    function openUserManagement(event) {
+        event.preventDefault(); // Impede o link de navegar para '#'
         if (IS_POWER_USER) {
              // Redireciona para o arquivo de gestão de usuários
             window.location.href = 'gestao_usuarios.html';
@@ -588,6 +637,8 @@
              showModal('Permissão Negada', 'A gestão de usuários é restrita a Renan Martins e ADM.', false);
         }
     }
+    // Expondo a função globalmente
+    window.openUserManagement = openUserManagement;
 
 
     window.onload = () => {
@@ -601,11 +652,6 @@
         document.getElementById('accessButton').onclick = authenticateUser;
         document.getElementById('logoutButton').onclick = logoutAndSwitchUser;
         document.getElementById('userManagementLink').onclick = openUserManagement;
-        
-        // Prepara o modal para ser usado como painel de controle
-        document.getElementById('modalTitle').textContent = 'Bem-vindo(a) à Gestão de Automações';
-        document.getElementById('modalMessage').innerHTML = 'Por favor, selecione seu nome completo para começar:';
-        document.getElementById('cancelButton').style.display = 'none'; // Esconde o cancelar no login inicial
     };
     
 </script>
@@ -622,6 +668,7 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             padding: 30px; 
             background-color: #e9eef2;
+            margin: 0;
         }
         .container { 
             max-width: 1300px; /* Mantido do código original */
@@ -642,7 +689,7 @@
             position: absolute;
             top: 20px;
             right: 20px;
-            display: flex;
+            display: none; /* Inicia oculto */
             align-items: center;
             background-color: #f0f0f0;
             padding: 8px 15px;
@@ -654,6 +701,7 @@
             color: #333;
             flex-direction: column;
             align-items: flex-end;
+            z-index: 10;
         }
         #userControl:hover { background-color: #e0e0e0; }
         .user-info { display: flex; align-items: center; cursor: pointer; }
@@ -686,12 +734,13 @@
         .input-form button {
             padding: 10px; background-color: #0070d2; color: white; border: none; border-radius: 4px; 
             cursor: pointer; transition: background-color 0.2s;
+            align-self: end; /* Alinha o botão ao final do grid cell */
         }
         .input-form button:hover { background-color: #005aa3; }
 
         /* Tabela */
         #automationTable { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.9em; }
-        #automationTable th, #automationTable td { padding: 10px 8px; text-align: left; border-bottom: 1px solid #e0e0e0; } 
+        #automationTable th, #automationTable td { padding: 10px 8px; text-align: left; border-bottom: 1px solid #e0e0e0; vertical-align: middle; } 
         #automationTable th { background-color: #0070d2; color: white; font-weight: 600; font-size: 1em; }
         #automationTable tr:nth-child(even) { background-color: #f9f9f9; }
         
@@ -705,6 +754,7 @@
             padding: 6px; border-radius: 4px; border: 1px solid #ccc; font-size: 0.9em; font-weight: bold;
             -webkit-appearance: none; -moz-appearance: none; appearance: none; cursor: default;
             display: inline-block; box-sizing: border-box;
+            width: 100%;
         }
         .status-select { cursor: pointer; }
         .status-display { border: none !important; }
@@ -762,12 +812,30 @@
              padding-right: 30px;
         }
         
+        /* Media query para responsividade */
         @media (max-width: 768px) {
+            body { padding: 10px; }
             .container { padding: 20px; }
             .input-form { grid-template-columns: 1fr; }
-            #automationTable th, #automationTable td { font-size: 0.8em; padding: 8px 5px; }
-            #userControl { position: static; margin-bottom: 20px; width: 100%; align-items: center; flex-direction: row; justify-content: space-between; }
-            .user-options { margin-top: 0; display: flex; }
+            .input-form button { margin-top: 10px; }
+            #userControl { 
+                position: relative; 
+                top: -10px; 
+                right: 0; 
+                width: 100%; 
+                margin-bottom: 15px; 
+                flex-direction: row; 
+                justify-content: space-between;
+                padding: 5px 10px;
+            }
+            .user-options { margin-top: 0; display: flex; align-items: center; }
+            h1 { font-size: 1.8em; }
+            h2 { font-size: 1.1em; }
+
+            /* Tabela responsiva */
+            #automationTable { display: block; overflow-x: auto; white-space: nowrap; }
+            #automationTable th, #automationTable td { min-width: 120px; } /* Largura mínima para colunas */
+            #automationTable th:first-child, #automationTable td:first-child { min-width: 180px; } /* Título */
         }
 
     </style>
@@ -780,8 +848,9 @@
             <h3 id="modalTitle">Bem-vindo(a) à Gestão de Automações</h3>
             <p id="modalMessage">Por favor, selecione seu nome completo para começar:</p>
             
+            <!-- O Select é preenchido pelo JavaScript (renderUserDropdown) -->
             <select id="userNameSelect" required>
-                <option value="" disabled selected>Selecione seu nome</option>
+                <option value="" disabled selected>Carregando nomes...</option>
             </select>
             
             <div id="cpfInputGroup">
@@ -789,12 +858,14 @@
             </div>
             
             <div>
+                <!-- Botões do Modal. O 'accessButton' é usado para Login ou 'OK' -->
                 <button id="accessButton" style="width: 100%;">Acessar</button>
                 <button id="cancelButton" style="display: none;"></button>
             </div>
         </div>
     </div>
 
+    <!-- Conteúdo Principal da Aplicação -->
     <div class="container" id="mainContent">
         
         <div id="userControl">
@@ -804,8 +875,8 @@
             </div>
             <div class="user-options">
                 <!-- O link para o arquivo gestao_usuarios.html -->
-                <a href="#" id="userManagementLink" onclick="openUserManagement(event)" style="display: none;">Incluir/Excluir Usuários</a>
-                <button id="logoutButton">Trocar Usuário / Sair</button>
+                <a href="gestao_usuarios.html" id="userManagementLink" style="display: none;">Incluir/Excluir Usuários</a>
+                <button id="logoutButton">Trocar Usuário</Sair</button>
             </div>
         </div>
 
@@ -822,10 +893,10 @@
                 <button onclick="addSolicitacao()">Adicionar</button>
             </div>
             
-            <div id="message" style="color: red; margin-bottom: 10px;"></div>
+            <p id="message" style="color: #c53929; text-align: center; margin-top: -15px; margin-bottom: 25px; font-weight: bold;"></p>
 
             <h3>Acompanhamento de Solicitações</h3>
-            <div style="overflow-x: auto;">
+            <div style="overflow-x: auto;"> <!-- Container para scroll horizontal em telas pequenas -->
                 <table id="automationTable">
                     <thead>
                         <tr>
@@ -841,7 +912,7 @@
                         </tr>
                     </thead>
                     <tbody id="automationTableBody">
-                        <!-- Conteúdo dinâmico -->
+                        <tr><td colspan="9" style="text-align: center; color: #6a6a6a;">Carregando solicitações...</td></tr>
                     </tbody>
                 </table>
             </div>
