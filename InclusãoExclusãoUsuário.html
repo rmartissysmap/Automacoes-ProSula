@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão Profissional de Usuários</title>
+    <!-- Carregamento do Tailwind CSS para estilo profissional -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0d1117; /* Fundo escuro profissional */
+            color: #c9d1d9;
+        }
+        .card {
+            background-color: #161b22;
+            border: 1px solid #30363d;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .btn-primary {
+            background-color: #238636;
+            color: white;
+        }
+        .btn-danger {
+            background-color: #da3633;
+            color: white;
+        }
+        .btn-secondary {
+            background-color: #21262d;
+            border: 1px solid #30363d;
+            color: #c9d1d9;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="app" class="min-h-screen p-4 sm:p-8 flex flex-col items-center">
+
+        <!-- Header e Botão Voltar -->
+        <header class="w-full max-w-4xl mb-8 flex justify-between items-center">
+            <h1 class="text-3xl font-bold text-green-400">Gestão de Usuários</h1>
+            <button onclick="goBack()" class="btn-secondary py-2 px-4 rounded-lg hover:bg-gray-700 transition duration-150">
+                &larr; Voltar para o Início
+            </button>
+        </header>
+        
+        <!-- Estado da Aplicação -->
+        <p id="status-message" class="text-sm mb-4 text-yellow-500"></p>
+        <p class="text-xs mb-6 text-gray-500">ID da Sessão (necessário para o Firestore): <span id="user-id">Carregando...</span></p>
+
+        <!-- Formulário de Inclusão de Usuário -->
+        <div class="w-full max-w-4xl card p-6 rounded-xl mb-8">
+            <h2 class="text-xl font-semibold mb-4 border-b border-gray-700 pb-2">Incluir Novo Usuário</h2>
+            <form id="addUserForm" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <input id="userName" type="text" placeholder="Nome do Usuário" required
+                       class="md:col-span-1 p-3 rounded-lg bg-gray-700 text-white border border-gray-600 focus:ring-green-500 focus:border-green-500">
+                <input id="userEmail" type="email" placeholder="Email (opcional)"
+                       class="md:col-span-1 p-3 rounded-lg bg-gray-700 text-white border border-gray-600 focus:ring-green-500 focus:border-green-500">
+                <button type="submit" class="md:col-span-1 btn-primary py-3 rounded-lg font-semibold hover:bg-green-600 transition duration-150">
+                    Adicionar Usuário
+                </button>
+            </form>
+        </div>
+
+        <!-- Lista de Usuários (Tabela Responsiva) -->
+        <div class="w-full max-w-4xl card p-6 rounded-xl">
+            <h2 class="text-xl font-semibold mb-4 border-b border-gray-700 pb-2">Usuários Ativos</h2>
+            
+            <div id="usersListContainer" class="overflow-x-auto">
+                <!-- Tabela de Usuários -->
+                <table class="min-w-full divide-y divide-gray-700">
+                    <thead class="bg-gray-800">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider hidden sm:table-cell">
+                                ID
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                                Nome
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider hidden md:table-cell">
+                                Email
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">
+                                Ações
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTableBody" class="divide-y divide-gray-700">
+                        <tr>
+                            <td colspan="4" class="py-4 text-center text-gray-500">Carregando usuários...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="noUsersMessage" class="hidden mt-4 text-center text-gray-500">
+                Nenhum usuário cadastrado ainda.
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Scripts de Firebase e Lógica da Aplicação -->
+    <script type="module">
+        // Importações necessárias do Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Variáveis globais de ambiente (preenchidas pelo sistema)
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        let db;
+        let auth;
+        let currentUserId = null;
+        let usersCollectionRef;
+
+        const statusMessage = document.getElementById('status-message');
+        const userIdDisplay = document.getElementById('user-id');
+        const usersTableBody = document.getElementById('usersTableBody');
+        const addUserForm = document.getElementById('addUserForm');
+
+        /**
+         * Exibe uma mensagem de status na UI.
+         * @param {string} message - A mensagem a ser exibida.
+         * @param {string} type - O tipo da mensagem ('success', 'error', 'info').
+         */
+        function showStatus(message, type = 'info') {
+            statusMessage.textContent = message;
+            statusMessage.className = 'text-sm mb-4';
+            switch (type) {
+                case 'success':
+                    statusMessage.classList.add('text-green-500');
+                    break;
+                case 'error':
+                    statusMessage.classList.add('text-red-500');
+                    break;
+                case 'info':
+                default:
+                    statusMessage.classList.add('text-yellow-500');
+                    break;
+            }
+        }
+
+        /**
+         * Inicializa o Firebase e realiza a autenticação.
+         */
+        async function initializeFirebase() {
+            if (!firebaseConfig) {
+                showStatus("Erro: Configuração do Firebase não encontrada.", 'error');
+                return;
+            }
+
+            try {
+                // Habilita logs de debug
+                setLogLevel('Debug');
+                
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                showStatus("Iniciando autenticação...");
+
+                // Autenticação com o token customizado ou anonimamente
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                currentUserId = auth.currentUser.uid;
+                userIdDisplay.textContent = currentUserId;
+
+                // O caminho da coleção para dados públicos/compartilhados é:
+                // /artifacts/{appId}/public/data/users_list
+                usersCollectionRef = collection(db, `artifacts/${appId}/public/data/app_users`);
+
+                showStatus("Conectado ao Firebase. Carregando dados...");
+
+                // Inicia o listener de usuários
+                setupUsersListener();
+
+            } catch (error) {
+                console.error("Erro na inicialização/autenticação do Firebase:", error);
+                showStatus(`Erro ao conectar: ${error.message}`, 'error');
+            }
+        }
+
+        /**
+         * Configura o listener em tempo real para a lista de usuários.
+         */
+        function setupUsersListener() {
+            const q = query(usersCollectionRef);
+
+            // onSnapshot fornece atualizações em tempo real
+            onSnapshot(q, (snapshot) => {
+                const users = [];
+                snapshot.forEach((doc) => {
+                    users.push({ id: doc.id, ...doc.data() });
+                });
+                
+                renderUsers(users);
+                showStatus(`Lista de usuários atualizada. Total: ${users.length}`, 'success');
+            }, (error) => {
+                console.error("Erro ao receber snapshot de usuários:", error);
+                showStatus("Erro ao carregar lista de usuários em tempo real.", 'error');
+            });
+        }
+
+        /**
+         * Renderiza a lista de usuários na tabela.
+         * @param {Array<Object>} users - Lista de objetos de usuário.
+         */
+        function renderUsers(users) {
+            usersTableBody.innerHTML = ''; // Limpa a lista atual
+
+            if (users.length === 0) {
+                document.getElementById('noUsersMessage').classList.remove('hidden');
+                usersTableBody.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="py-4 text-center text-gray-500">Nenhum usuário cadastrado.</td>
+                    </tr>
+                `;
+                return;
+            }
+
+            document.getElementById('noUsersMessage').classList.add('hidden');
+            
+            users.forEach(user => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-800 transition duration-150';
+                
+                // Firestore ID (Apenas os primeiros 8 caracteres)
+                const docId = user.id;
+
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 hidden sm:table-cell">
+                        ${docId.substring(0, 8)}...
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap font-medium">
+                        ${user.name}
+                        ${user.isPowerUser ? '<span class="ml-2 px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">ADM</span>' : ''}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 hidden md:table-cell">
+                        ${user.email || 'N/A'}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button data-id="${docId}" class="btn-danger text-xs py-1 px-3 rounded-md hover:bg-red-700 transition duration-150 delete-btn">
+                            Excluir
+                        </button>
+                    </td>
+                `;
+                usersTableBody.appendChild(row);
+            });
+
+            // Adiciona listeners para os botões de exclusão
+            document.querySelectorAll('.delete-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const userIdToDelete = e.currentTarget.getAttribute('data-id');
+                    handleDeleteUser(userIdToDelete);
+                });
+            });
+        }
+        
+        // Função para formatar o nome como no gestao_solicitacoes.html
+        function formatName(name) {
+            if (!name) return '';
+            let cleanedName = name.trim().toLowerCase();
+            return cleanedName.split(' ').map(word => {
+                if (word.length === 0) return '';
+                return word.charAt(0).toUpperCase() + word.slice(1);
+            }).join(' ');
+        }
+
+        /**
+         * Lida com o envio do formulário para adicionar um novo usuário.
+         */
+        addUserForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const nameInput = document.getElementById('userName');
+            const emailInput = document.getElementById('userEmail');
+            
+            const name = formatName(nameInput.value); // Formata o nome antes de salvar
+            const email = emailInput.value.trim();
+
+            if (!name) {
+                showStatus("O nome do usuário é obrigatório.", 'error');
+                return;
+            }
+
+            // Cria um ID de documento padronizado, igual ao `gestao_solicitacoes.html`
+            const docId = name.toUpperCase().replace(/\s/g, '_'); 
+
+            try {
+                const newUser = {
+                    name: name,
+                    email: email,
+                    createdAt: new Date().toISOString(),
+                    managedBy: currentUserId, 
+                    isPowerUser: false // Novo usuário começa sem permissão ADM
+                };
+                
+                // Usa setDoc para garantir que o ID é o nome formatado
+                await setDoc(doc(usersCollectionRef, docId), newUser);
+
+                showStatus(`Usuário '${name}' adicionado com sucesso!`, 'success');
+                nameInput.value = ''; // Limpa o formulário
+                emailInput.value = '';
+            } catch (error) {
+                console.error("Erro ao adicionar usuário:", error);
+                showStatus(`Erro ao adicionar usuário: ${error.message}`, 'error');
+            }
+        });
+
+        /**
+         * Lida com a exclusão de um usuário.
+         * @param {string} userId - O ID do documento do usuário no Firestore.
+         */
+        async function handleDeleteUser(userId) {
+            // Verifica se está tentando deletar um ADM (proteção básica)
+            const users = Array.from(usersTableBody.querySelectorAll('tr')).map(row => ({
+                id: row.querySelector('.delete-btn').getAttribute('data-id'),
+                isAdm: row.innerHTML.includes('ADM')
+            }));
+            
+            const userToDelete = users.find(u => u.id === userId);
+            
+            if (userToDelete && userToDelete.isAdm) {
+                showStatus("Não é permitido excluir usuários ADM/Power User diretamente por este painel.", 'error');
+                return;
+            }
+            
+            console.log(`Tentativa de excluir usuário com ID: ${userId}`);
+
+            try {
+                // Confirmação (usando showStatus, já que confirm() é proibido)
+                showStatus("Excluindo usuário...", 'info');
+
+                const userDocRef = doc(usersCollectionRef, userId);
+                await deleteDoc(userDocRef);
+                
+                showStatus(`Usuário (ID: ${userId.substring(0, 5)}...) excluído com sucesso!`, 'success');
+            } catch (error) {
+                console.error("Erro ao excluir usuário:", error);
+                showStatus(`Erro ao excluir usuário: ${error.message}`, 'error');
+            }
+        }
+
+        /**
+         * Simula a ação de "Voltar para o Início".
+         */
+        window.goBack = function() {
+            // Em uma aplicação real, você voltaria à tela inicial, neste caso, o gestao_solicitacoes.html
+            showStatus("Voltando para a tela principal (Gestão de Solicitações)...", 'info');
+            // Como estamos no ambiente Canvas, simular o link:
+            window.location.href = 'gestao_solicitacoes.html';
+        }
+
+        // Inicia a aplicação no carregamento da janela
+        window.onload = initializeFirebase;
+
+    </script>
+</body>
+</html>
