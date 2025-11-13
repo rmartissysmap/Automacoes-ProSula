@@ -25,41 +25,57 @@
         h2 { color: #6a6a6a; font-size: 1.2em; font-weight: 300; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; margin-top: 0; margin-bottom: 30px; text-align: center; }
         .tool-section { min-height: 200px; padding: 10px; }
 
-        /* User Control (Clique em toda a área) */
+        /* User Control (NOVO ESTILO PROFISSIONAL) */
         #userControl {
             position: absolute;
             top: 20px;
             right: 20px;
-            display: flex;
-            align-items: center;
+            display: none; /* Começa oculto */
+            flex-direction: column;
+            align-items: flex-end;
             background-color: #f0f0f0;
             padding: 8px 15px;
             border-radius: 20px;
-            cursor: pointer; 
-            transition: background-color 0.2s;
             font-size: 0.9em;
             font-weight: 600;
             color: #333;
-        }
-        #userControl:hover {
-            background-color: #e0e0e0;
+            z-index: 10;
         }
         .user-info {
              display: flex;
              align-items: center;
+             cursor: default; /* Não é mais clicável */
         }
         .user-icon {
-            width: 30px;
-            height: 30px;
-            background-color: #0070d2;
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 1em;
-            margin-right: 10px;
+            width: 30px; height: 30px; background-color: #0070d2; color: white; border-radius: 50%;
+            display: flex; justify-content: center; align-items: center; font-size: 1em; margin-left: 10px;
         }
+        .user-options {
+            margin-top: 8px;
+            padding-top: 5px;
+            border-top: 1px solid #d0d0d0;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+        .user-options a, .user-options button {
+            background: none; border: none; color: #0070d2; text-decoration: none;
+            padding: 2px 0; cursor: pointer; font-size: 0.9em; font-weight: 600;
+        }
+        .user-options a:hover, .user-options button:hover {
+            text-decoration: underline;
+        }
+        #userManagementLink {
+            font-size: 0.8em;
+            font-weight: bold;
+            color: #1a1a1a;
+            margin-bottom: 4px;
+        }
+        #logoutButton {
+            font-size: 0.8em;
+            color: #c53929; /* Vermelho para Sair */
+        }
+
 
         /* Formulário de Input */
         .input-form {
@@ -73,54 +89,30 @@
             background-color: #f5f5f5;
         }
         .input-form input[type="text"] {
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            width: 100%;
-            box-sizing: border-box;
+            padding: 10px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box;
         }
         .input-form button {
-            padding: 10px;
-            background-color: #0070d2;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: background-color 0.2s;
+            padding: 10px; background-color: #0070d2; color: white; border: none; border-radius: 4px;
+            cursor: pointer; transition: background-color 0.2s;
         }
         .input-form button:hover { background-color: #005aa3; }
 
         /* Tabela */
         #automationTable { 
-            width: 100%; 
-            border-collapse: collapse; 
-            margin-top: 20px; 
-            font-size: 0.9em; 
-            table-layout: fixed; 
+            width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.9em; table-layout: fixed; 
         }
         #automationTable th, #automationTable td { 
-            padding: 10px 8px; 
-            text-align: left; 
-            border-bottom: 1px solid #e0e0e0; 
-            word-wrap: break-word; 
+            padding: 10px 8px; text-align: left; border-bottom: 1px solid #e0e0e0; word-wrap: break-word; 
         } 
         #automationTable th { 
-            background-color: #0070d2; 
-            color: white; 
-            font-weight: 600; 
-            font-size: 1em; 
+            background-color: #0070d2; color: white; font-weight: 600; font-size: 1em; 
         }
         #automationTable tr:nth-child(even) { background-color: #f9f9f9; }
         
         #automationTable th:nth-child(1), #automationTable td:nth-child(1) { width: 25%; } 
         #automationTable th:nth-child(2), #automationTable td:nth-child(2) { width: 15%; } 
         #automationTable th:nth-child(3), #automationTable td:nth-child(3) { width: 12%; } 
-        #automationTable th:nth-child(4), #automationTable td:nth-child(4) { width: 10%; } 
-        #automationTable th:nth-child(5), #automationTable td:nth-child(5) { width: 10%; } 
-        #automationTable th:nth-child(6), #automationTable td:nth-child(6) { width: 10%; } 
-        #automationTable th:nth-child(7), #automationTable td:nth-child(7) { width: 10%; } 
-        #automationTable th:nth-child(8), #automationTable td:nth-child(8) { width: 15%; } 
-        #automationTable th:nth-child(9), #automationTable td:nth-child(9) { width: 8%; } 
+        /* ... (restante dos estilos da tabela) ... */
 
 
         /* Campos Editáveis */
@@ -131,42 +123,22 @@
         
         /* --- ESTILOS DE STATUS --- */
         .status-select, .status-display { 
-            padding: 6px; 
-            border-radius: 4px; 
-            border: 1px solid #ccc; 
-            font-size: 0.9em; 
-            font-weight: bold;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            appearance: none;
-            cursor: default;
-            display: inline-block;
-            box-sizing: border-box;
-            width: 100%;
+            padding: 6px; border-radius: 4px; border: 1px solid #ccc; font-size: 0.9em; font-weight: bold;
+            -webkit-appearance: none; -moz-appearance: none; appearance: none; cursor: default;
+            display: inline-block; box-sizing: border-box; width: 100%;
         }
-        .status-select { 
-            cursor: pointer; 
-            width: 90%; 
-        }
-        .status-display { 
-            border: none !important; 
-        }
+        .status-select { cursor: pointer; width: 90%; }
+        .status-display { border: none !important; }
         
         /* Cores */
         .status-backlog { 
-            background-color: #f5f5f5 !important; 
-            color: #616161; 
-            border-color: #616161 !important;
+            background-color: #f5f5f5 !important; color: #616161; border-color: #616161 !important;
         }
         .status-em-processo { 
-            background-color: #fff8e1 !important; 
-            color: #ffa000; 
-            border-color: #ffa000 !important;
+            background-color: #fff8e1 !important; color: #ffa000; border-color: #ffa000 !important;
         }
         .status-finalizado { 
-            background-color: #E8F5E9 !important; 
-            color: #2E7D32; 
-            border-color: #2E7D32 !important; 
+            background-color: #E8F5E9 !important; color: #2E7D32; border-color: #2E7D32 !important; 
         }
 
         /* Botões de Ação */
@@ -176,81 +148,46 @@
 
         /* Estilo para links */
         .file-link-cell { 
-            white-space: nowrap; 
-            overflow: hidden; 
-            text-overflow: ellipsis; 
-            max-width: 150px; 
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; 
         }
         .file-link-cell a {
-            color: #0070d2;
-            text-decoration: none;
-            font-weight: bold; 
+            color: #0070d2; text-decoration: none; font-weight: bold; 
         }
-        .file-link-cell a:hover {
-            text-decoration: underline;
-        }
+        .file-link-cell a:hover { text-decoration: underline; }
 
         /* Modal de Autenticação */
         #authModal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.6);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.6); display: flex;
+            justify-content: center; align-items: center; z-index: 1000;
         }
         .modal-content {
-            background: white;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-            text-align: center;
-            min-width: 300px;
+            background: white; padding: 30px; border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); text-align: center; min-width: 300px;
         }
-        /* CORREÇÃO: Estilo para o <select> e <input> */
         .modal-content select, .modal-content input, .modal-content button {
-            margin-top: 15px;
-            padding: 10px;
-            width: 100%;
-            box-sizing: border-box;
-            border-radius: 4px;
+            margin-top: 15px; padding: 10px; width: 100%;
+            box-sizing: border-box; border-radius: 4px;
         }
         .modal-content select {
-             border: 1px solid #ccc;
-             background-color: white;
-             -webkit-appearance: menulist;
-             -moz-appearance: menulist;
-             appearance: menulist;
+             border: 1px solid #ccc; background-color: white;
+             -webkit-appearance: menulist; -moz-appearance: menulist; appearance: menulist;
              cursor: pointer;
         }
-        .modal-content input {
-            border: 1px solid #ccc;
-        }
+        .modal-content input { border: 1px solid #ccc; }
         .modal-content button {
-            background-color: #0070d2;
-            color: white;
-            border: none;
-            cursor: pointer;
+            background-color: #0070d2; color: white; border: none; cursor: pointer;
         }
         #mainContent { display: none; }
         
         .editable-renan {
-            background-color: #f0faff; 
-            border: 1px solid #0070d2;
+            background-color: #f0faff; border: 1px solid #0070d2;
         }
         .editable-renan[contenteditable="false"] {
-            background-color: transparent;
-            border: none;
+            background-color: transparent; border: none;
         }
         
-        #cpfInputGroup {
-            display: none;
-        }
-
+        #cpfInputGroup { display: none; }
     </style>
 </head>
 <body>
@@ -260,7 +197,6 @@
             <h3>Bem-vindo(a) à Gestão de Automações</h3>
             <p>Por favor, **selecione** seu nome completo para começar:</p>
             
-            <!-- CORREÇÃO: <select> ao invés de <input> -->
             <select id="userNameSelect">
                 <!-- As opções serão preenchidas pelo JavaScript -->
             </select>
@@ -269,7 +205,7 @@
                 <input type="password" id="cpfInput" placeholder="Digite a Senha de Acesso" required> 
             </div>
             
-            <button onclick="authenticateUser()">Acessar</button>
+            <button id="authButton">Acessar</button>
             
             <div id="message" style="color: red; margin-top: 15px;"></div>
         </div>
@@ -277,9 +213,17 @@
 
     <div class="container" id="mainContent">
         
-        <div id="userControl" onclick="logoutAndSwitchUser()">
-            <span class="user-icon" id="userInitial">U</span>
-            <span id="userNameDisplay">Usuário</span>
+        <!-- NOVO PAINEL DE USUÁRIO -->
+        <div id="userControl">
+            <div class="user-info">
+                <span id="userNameDisplay">Usuário</span>
+                <span class="user-icon" id="userInitial">U</span>
+            </div>
+            <div class="user-options">
+                <!-- Link para a nova página, só aparece para ADM -->
+                <a href="gestao_usuarios.html" id="userManagementLink" style="display: none;">Gerenciar Usuários</a>
+                <button id="logoutButton">Trocar Usuário</button>
+            </div>
         </div>
 
         <h1>Automatização</h1>
@@ -294,7 +238,8 @@
                 <button onclick="addSolicitacao()">Adicionar</button>
             </div>
             
-            
+            <!-- Div de mensagem para o formulário (antes estava no modal) -->
+            <div id="formMessage" style="color: red; margin-bottom: 10px; text-align: center; font-weight: bold;"></div>
 
             <h3>Acompanhamento de Solicitações</h3>
             <div style="overflow-x: auto;">
@@ -317,20 +262,19 @@
                     </tbody>
                 </table>
             </div>
-            
         </div>
-
     </div>
+    
     <script>
-        // Chave para armazenamento local
-        const STORAGE_KEY = 'automationRequests';
-        // Status disponíveis para as solicitações
-        const STATUSES = ['Backlog', 'Em Processo', 'Finalizado'];
-        // Usuários autorizados
-        const AUTHORIZED_EDITORS = ['RENAN MARTINS']; 
+        // Chaves para armazenamento local
+        const REQUEST_STORAGE_KEY = 'automationRequests';
+        const USER_STORAGE_KEY = 'automationUserList'; // CHAVE COMPARTILHADA
         
-        // CORREÇÃO: Lista de usuários para o dropdown
-        const USER_LIST = [
+        const STATUSES = ['Backlog', 'Em Processo', 'Finalizado'];
+        const AUTHORIZED_EDITORS = ['RENAN MARTINS', 'ADM']; 
+        
+        // Lista de usuários PADRÃO (só usada se o localStorage estiver vazio)
+        const DEFAULT_USERS = [
             'Selecione seu Nome...', // Opção Padrão
             'Renan Martins',
             'Vinicius', 
@@ -342,40 +286,65 @@
             'ADM'
         ];
         
-        // Senha de acesso para Renan (mantida internamente)
         const AUTHORIZED_PASSWORD = 'salmos93'; 
-        
         let CURRENT_USER = ''; 
 
-        // Função utilitária para formatar nomes
+        // --- FUNÇÕES DE DADOS (localStorage) ---
+        
+        /** Carrega a lista de usuários do localStorage. */
+        function loadUserList() {
+            let users = localStorage.getItem(USER_STORAGE_KEY);
+            if (!users) {
+                // Se não existir, cria a lista padrão
+                localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(DEFAULT_USERS));
+                return DEFAULT_USERS;
+            }
+            return JSON.parse(users);
+        }
+
+        /** Carrega as solicitações do localStorage. */
+        function loadRequests() {
+            let requests = localStorage.getItem(REQUEST_STORAGE_KEY);
+            if (!requests) {
+                // Se não existir, cria os dados iniciais
+                const initialData = [
+                    { title: 'Concierge', solicitant: 'Vinicius', date: '2025-10-22T00:00:00.000Z', status: 'Finalizado', team: 'ProSula', conclusionDate: '22/10/2025', updateDate: '22/10/2025', fileLink: 'https://exemplo.com/concierge' },
+                    { title: 'Integração', solicitant: 'Matheus', date: '2025-10-28T00:00:00.000Z', status: 'Finalizado', team: 'Contador/Comercial', conclusionDate: '28/10/2025', updateDate: '28/10/2025', fileLink: 'https://exemplo.com/integracao' },
+                    { title: 'Paliativo', solicitant: 'Vinicius', date: new Date().toISOString(), status: 'Em Processo', team: 'Relacionamento', conclusionDate: '', updateDate: '', fileLink: '' }
+                ];
+                saveRequests(initialData);
+                requests = JSON.stringify(initialData);
+            }
+            
+            let loadedRequests = JSON.parse(requests);
+            return loadedRequests.map(req => {
+                req.solicitant = formatName(req.solicitant); 
+                return req;
+            });
+        }
+
+        function saveRequests(requests) {
+            localStorage.setItem(REQUEST_STORAGE_KEY, JSON.stringify(requests));
+        }
+        
         function formatName(name) {
             if (!name) return '';
             let cleanedName = name.trim().toLowerCase();
-            
             return cleanedName.split(' ').map(word => {
                 if (word.length === 0) return '';
                 return word.charAt(0).toUpperCase() + word.slice(1);
             }).join(' ');
         }
         
-        // Dados iniciais
-        const INITIAL_DATA = [
-            { title: 'Concierge', solicitant: 'Vinicius', date: '2025-10-22T00:00:00.000Z', status: 'Finalizado', team: 'ProSula', conclusionDate: '22/10/2025', updateDate: '22/10/2025', fileLink: 'https://exemplo.com/concierge' },
-            { title: 'Integração', solicitant: 'Matheus', date: '2025-10-28T00:00:00.000Z', status: 'Finalizado', team: 'Contador/Comercial', conclusionDate: '28/10/2025', updateDate: '28/10/2025', fileLink: 'https://exemplo.com/integracao' },
-            { title: 'CSP Query', solicitant: 'Diego', date: '2025-11-04T00:00:00.000Z', status: 'Finalizado', team: 'CSP', conclusionDate: '04/11/2025', updateDate: '04/11/2025', fileLink: 'https://exemplo.com/cspquery' },
-            { title: 'Reset de Senha', solicitant: 'Diego', date: '2025-11-11T00:00:00.000Z', status: 'Finalizado', team: 'CSP', conclusionDate: '11/11/2025', updateDate: '11/11/2025', fileLink: 'https://exemplo.com/reset-senha' },
-            { title: 'Paliativo', solicitant: 'Vinicius', date: new Date().toISOString(), status: 'Em Processo', team: 'Relacionamento', conclusionDate: '', updateDate: '', fileLink: '' }
-        ];
-        
         // --- Lógica de Permissão e Autenticação ---
         
         function isAuthorized(user) {
             if (!user) return false;
-            const cleanUser = user.toUpperCase().trim(); 
-            return AUTHORIZED_EDITORS.includes(cleanUser) || cleanUser === 'ADM';
+            const cleanUser = formatName(user).toUpperCase().trim(); 
+            // Compara formatado para garantir "Renan Martins" e "renan martins" sejam iguais
+            return AUTHORIZED_EDITORS.includes(cleanUser);
         }
         
-        // CORREÇÃO: Verifica se Renan ou ADM estão selecionados
         function checkIfRenan() {
             const userNameSelect = document.getElementById('userNameSelect');
             const userName = userNameSelect.value.trim(); 
@@ -390,13 +359,11 @@
             }
         }
         
-        // CORREÇÃO: Função de autenticação lendo do <select>
         function authenticateUser() {
             const userNameSelect = document.getElementById('userNameSelect');
             const userName = userNameSelect.value.trim();
-            const messageDiv = document.getElementById('message');
+            const messageDiv = document.getElementById('message'); // Mensagem do modal
             
-            // Validação
             if (userName === 'Selecione seu Nome...' || userName === '') {
                 messageDiv.textContent = 'Por favor, selecione seu nome para continuar.';
                 return;
@@ -408,9 +375,7 @@
 
             if (isPowerUser) {
                 const passwordInput = document.getElementById('cpfInput').value.trim().toLowerCase();
-                
                 if (passwordInput !== AUTHORIZED_PASSWORD) {
-                    console.error('Erro de autenticação: Senha incorreta.');
                     messageDiv.textContent = 'Senha incorreta. Acesso negado.';
                     return;
                 }
@@ -433,10 +398,14 @@
             localStorage.removeItem('lastUser');
             
             document.getElementById('mainContent').style.display = 'none';
+            document.getElementById('userControl').style.display = 'none'; // Esconde o painel do usuário
             document.getElementById('authModal').style.display = 'flex';
             
-            // Volta o select para a opção padrão
-            document.getElementById('userNameSelect').value = USER_LIST[0]; 
+            // Recarrega a lista de usuários no dropdown
+            populateUserSelect(); 
+            const userSelect = document.getElementById('userNameSelect');
+            userSelect.value = loadUserList()[0]; // Volta para "Selecione seu Nome..."
+            
             document.getElementById('cpfInput').value = '';
             document.getElementById('cpfInputGroup').style.display = 'none'; 
             document.getElementById('solicitanteInput').value = ''; 
@@ -448,6 +417,10 @@
             const initial = formattedName.trim().toUpperCase().charAt(0);
             document.getElementById('userNameDisplay').textContent = formattedName;
             document.getElementById('userInitial').textContent = initial;
+            
+            // MOSTRA O LINK DE GERENCIAR USUÁRIOS SE FOR ADM
+            document.getElementById('userManagementLink').style.display = isAuthorized(CURRENT_USER) ? 'block' : 'none';
+            
             document.getElementById('userControl').style.display = 'flex';
         }
 
@@ -455,42 +428,10 @@
             const isPowerUser = isAuthorized(user); 
             const cleanStatus = status.toUpperCase().trim();
             
-            const requiresRenanPermission = cleanStatus === 'EM PROCESSO' || cleanStatus === 'FINALIZADO';
-            
-            if (requiresRenanPermission) {
-                return isPowerUser;
+            if (cleanStatus === 'EM PROCESSO' || cleanStatus === 'FINALIZADO') {
+                return isPowerUser; // Só ADM deleta
             }
-            
-            if (cleanStatus === 'BACKLOG') {
-                return true;
-            }
-
-            return false;
-        }
-
-        // --- Funções de Data e Persistência ---
-        
-        function loadRequests() {
-            let requests = localStorage.getItem(STORAGE_KEY);
-            
-            if (!requests) {
-                saveRequests(INITIAL_DATA);
-                requests = JSON.stringify(INITIAL_DATA);
-            }
-            
-            let loadedRequests = JSON.parse(requests);
-            loadedRequests = loadedRequests.map(req => {
-                if (req.status === 'Concluído') {
-                    req.status = 'Finalizado';
-                }
-                req.solicitant = formatName(req.solicitant); 
-                return req;
-            });
-            return loadedRequests;
-        }
-
-        function saveRequests(requests) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(requests));
+            return true; // Todos podem deletar Backlog
         }
 
         function formatDate(date) {
@@ -501,7 +442,7 @@
             return d.toLocaleDateString('pt-BR'); 
         }
         
-        // --- Funções de Renderização ---
+        // --- Funções de Renderização da Tabela ---
         
         function renderTable() {
             const tbody = document.getElementById('automationTableBody');
@@ -516,7 +457,6 @@
 
             requests.forEach((req, index) => {
                 const tr = document.createElement('tr');
-                
                 tr.appendChild(createEditableCell(req.title, index, 'title', false));
                 tr.appendChild(createEditableCell(req.solicitant, index, 'solicitant', false)); 
                 tr.appendChild(createStatusCell(req, index, canEditRestrictedFields));
@@ -528,12 +468,9 @@
                 tr.appendChild(conclusionDateCell);
                 
                 tr.appendChild(createReadOnlyCell(formatDate(req.updateDate)));
-
-                const linkFileCell = createLinkFileCell(req, index, !canEditRestrictedFields);
-                tr.appendChild(linkFileCell);
+                tr.appendChild(createLinkFileCell(req, index, !canEditRestrictedFields));
 
                 const actionsCell = document.createElement('td');
-                
                 if (canDelete(CURRENT_USER, req.status)) {
                     const deleteBtn = document.createElement('button');
                     deleteBtn.textContent = 'Excluir';
@@ -542,7 +479,6 @@
                     actionsCell.appendChild(deleteBtn);
                 }
                 tr.appendChild(actionsCell);
-
                 tbody.appendChild(tr);
             });
         }
@@ -560,15 +496,11 @@
                  
                  cell.onblur = (e) => {
                     let newText = e.target.textContent.trim();
-                    if (newText === 'Adicionar link...') {
-                        newText = '';
-                    }
+                    if (newText === 'Adicionar link...') newText = '';
                     updateRequest(index, 'fileLink', newText);
                  };
                  cell.onfocus = (e) => {
-                    if (e.target.textContent === 'Adicionar link...') {
-                        e.target.textContent = '';
-                    }
+                    if (e.target.textContent === 'Adicionar link...') e.target.textContent = '';
                  };
                  
             } else if (fileLink !== '') {
@@ -578,13 +510,12 @@
                  link.target = '_blank'; 
                  link.textContent = 'Acessar Link'; 
                  link.title = fileLink; 
-                 
                  cell.appendChild(link);
-                 cell.setAttribute('contenteditable', 'false');
             } else {
                  cell.textContent = '-';
-                 cell.setAttribute('contenteditable', 'false');
             }
+            cell.setAttribute('contenteditable', 'false'); // A célula em si não é editável
+            if (canEdit) cell.querySelector('div, a')?.setAttribute('contenteditable', 'true');
             
             return cell;
         }
@@ -610,7 +541,6 @@
                     updateRequest(index, fieldName, newValue);
                 }
             }
-            
             return cell;
         }
         
@@ -621,30 +551,24 @@
             if (canEdit) {
                 const select = document.createElement('select');
                 select.className = `status-select ${statusClass}`;
-                
                 STATUSES.forEach(status => {
                     const option = document.createElement('option');
                     option.value = status;
                     option.textContent = status;
-                    if (req.status === status) {
-                        option.selected = true;
-                    }
+                    if (req.status === status) option.selected = true;
                     select.appendChild(option);
                 });
-
                 select.onchange = (e) => {
                     updateRequest(index, 'status', e.target.value);
                     e.target.className = `status-select status-${e.target.value.toLowerCase().replace(' ', '-')}`;
                 };
                 statusCell.appendChild(select);
-
             } else {
                 const span = document.createElement('span');
                 span.textContent = req.status;
                 span.className = `status-display ${statusClass}`; 
                 statusCell.appendChild(span);
             }
-            
             return statusCell;
         }
         
@@ -652,20 +576,7 @@
         
         function addSolicitacao() {
             const titleInput = document.getElementById('solicitacaoInput');
-            // CORREÇÃO: Pegando a div de mensagem correta (dentro do modal está #message, no form não tinha id)
-            const formMessageDiv = document.querySelector('.tool-section #message'); 
-            
-            // Se a div de mensagem não existir no form, criamos uma (fallback)
-             if (!formMessageDiv) {
-                 formMessageDiv = document.createElement('div');
-                 formMessageDiv.id = 'form-message';
-                 formMessageDiv.style.color = 'red';
-                 formMessageDiv.style.marginBottom = '10px';
-                 const inputForm = document.querySelector('.input-form');
-                 inputForm.parentNode.insertBefore(formMessageDiv, inputForm.nextSibling);
-             }
-
-
+            const formMessageDiv = document.getElementById('formMessage');
             const title = titleInput.value.trim();
             const solicitant = CURRENT_USER; 
 
@@ -698,21 +609,12 @@
             const requests = loadRequests();
             if (requests[index]) {
                 const oldValue = requests[index][field];
-                
-                // Se o valor for "Adicionar link...", salva como vazio
                 let newValue = value.trim();
-                if (field === 'fileLink' && newValue === 'Adicionar link...') {
-                    newValue = '';
-                }
                 
                 requests[index][field] = newValue;
                 
                 if (field !== 'updateDate' && oldValue !== newValue) {
                     requests[index].updateDate = new Date().toLocaleDateString('pt-BR'); 
-                }
-                
-                if (field === 'conclusionDate' && newValue === '') {
-                    requests[index].conclusionDate = '';
                 }
 
                 saveRequests(requests);
@@ -722,19 +624,14 @@
 
         function deleteRequest(index) {
             const requests = loadRequests();
-            if (!requests[index]) return; // Proteção caso o índice não exista
-            
+            if (!requests[index]) return; 
             const status = requests[index].status;
             
             if (!canDelete(CURRENT_USER, status)) {
-                // Mensagem de erro no formulário principal
-                const formMessageDiv = document.querySelector('.tool-section #message') || document.getElementById('message');
-                if(formMessageDiv) formMessageDiv.textContent = 'A exclusão de tarefas "Em Processo" ou "Finalizadas" é restrita a usuários autorizados (Renan Martins/ADM).';
-                console.warn('Tentativa de exclusão não autorizada.');
+                document.getElementById('formMessage').textContent = 'A exclusão de tarefas "Em Processo" ou "Finalizadas" é restrita a usuários autorizados (Renan Martins/ADM).';
                 return;
             }
             
-            // Usando o confirm() nativo do navegador
             if (window.confirm(`Tem certeza que deseja excluir a solicitação "${requests[index].title}"?`)) {
                 requests.splice(index, 1);
                 saveRequests(requests);
@@ -742,68 +639,63 @@
             }
         }
         
-        // CORREÇÃO: Preenche o dropdown de usuários na inicialização
+        /** Preenche o dropdown de usuários na inicialização */
         function populateUserSelect() {
             const select = document.getElementById('userNameSelect');
             select.innerHTML = ''; // Limpa antes de preencher
             
-            USER_LIST.forEach(user => {
+            const users = loadUserList(); // Carrega do localStorage
+            
+            users.forEach(user => {
                 const option = document.createElement('option');
                 option.value = user;
                 option.textContent = user;
-                // A opção "Selecione seu Nome..." será a primeira e selecionada por padrão
-                if (user === USER_LIST[0]) {
+                if (user === users[0]) { // "Selecione seu Nome..."
                     option.disabled = true;
                     option.selected = true;
                 }
                 select.appendChild(option);
             });
             
-            // Reatribui o evento de mudança (onchange)
             select.onchange = checkIfRenan;
         }
 
 
-        // Inicialização
+        // --- Inicialização ---
         window.onload = () => {
-            // PASSO 1: Preenche o SELECT IMEDIATAMENTE.
+            // PASSO 1: Preenche o SELECT com usuários do localStorage.
             populateUserSelect(); 
             
             const lastUser = localStorage.getItem('lastUser');
+            const userSelect = document.getElementById('userNameSelect');
+            const users = loadUserList(); // Pega a lista atual
+
             if (lastUser) {
-                 // Lógica para usuário que já estava logado
-                 CURRENT_USER = formatName(lastUser); 
-                 document.getElementById('solicitanteInput').value = CURRENT_USER;
-                 updateUserDisplay(CURRENT_USER);
-                 document.getElementById('authModal').style.display = 'none';
-                 document.getElementById('mainContent').style.display = 'block';
-                 
-                 // Seleciona o usuário correto no dropdown, que AGORA está preenchido
-                 const userSelect = document.getElementById('userNameSelect');
-                 // Tenta encontrar o usuário salvo na lista
-                 const foundUser = USER_LIST.find(u => formatName(u) === CURRENT_USER);
+                 const foundUser = users.find(u => formatName(u) === formatName(lastUser));
                  
                  if (foundUser) {
-                     userSelect.value = foundUser;
+                     // Lógica para usuário que já estava logado
+                     CURRENT_USER = formatName(lastUser); 
+                     document.getElementById('solicitanteInput').value = CURRENT_USER;
+                     updateUserDisplay(CURRENT_USER);
+                     document.getElementById('authModal').style.display = 'none';
+                     document.getElementById('mainContent').style.display = 'block';
+                     userSelect.value = foundUser; // Define o valor no dropdown
+                     checkIfRenan(); // Verifica se Renan/ADM está selecionado
+                     renderTable();
                  } else {
-                     // Se o usuário salvo não existe mais na lista, força o logout
-                     userSelect.value = USER_LIST[0]; 
-                     logoutAndSwitchUser(); // Força o logout
-                     return; // Para a execução do onload aqui
+                     // Usuário salvo não existe mais na lista (foi excluído), força o logout
+                     logoutAndSwitchUser();
                  }
-                 
-                 checkIfRenan(); // Verifica se Renan/ADM está selecionado
-                 renderTable();
-
             } else {
                  // Lógica para novo acesso: exibe o modal
                  document.getElementById('authModal').style.display = 'flex';
-                 // Garante que o dropdown esteja na opção padrão
-                 document.getElementById('userNameSelect').value = USER_LIST[0]; 
+                 userSelect.value = users[0]; // Garante que "Selecione..." esteja selecionado
             }
             
-            // Garante que a autenticação funcione ao clicar no botão
-            document.querySelector('.modal-content button').onclick = authenticateUser; 
+            // Liga os botões
+            document.getElementById('authButton').onclick = authenticateUser; 
+            document.getElementById('logoutButton').onclick = logoutAndSwitchUser;
         };
     </script>
 </body>
