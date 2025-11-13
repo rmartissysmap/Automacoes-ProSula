@@ -1,615 +1,3 @@
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, getDocs, orderBy, limit, serverTimestamp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-    // Variáveis Globais do Canvas (MANDATÓRIO USAR)
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-    const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
-    // Configurações e Inicialização do Firebase
-    let app, db, auth;
-    let CURRENT_USER = '';
-    let USER_LIST = [];
-    let IS_POWER_USER = false;
-    let USER_ID = null; // ID do Firebase, usado para o caminho do Firestore
-
-    // Senha de acesso para Renan Martins e ADM
-    const AUTHORIZED_PASSWORD = 'salmos93';
-    const STATUSES = ['Backlog', 'Em Processo', 'Finalizado'];
-    const DEFAULT_USERS = ['Vinicius', 'Diego', 'Matheus', 'Renato', 'Lucas', 'Nedson', 'Renan Martins', 'ADM'];
-
-    function formatName(name) {
-        if (!name) return '';
-        let cleanedName = name.trim().toLowerCase();
-        return cleanedName.split(' ').map(word => {
-            if (word.length === 0) return '';
-            return word.charAt(0).toUpperCase() + word.slice(1);
-        }).join(' ');
-    }
-    
-    // --- LÓGICA DE MODAL (Substitui alert/confirm) ---
-    function showModal(title, message, isConfirm, callback) {
-        const modal = document.getElementById('authModal');
-        const modalTitle = document.getElementById('modalTitle');
-        const modalMessage = document.getElementById('modalMessage');
-        const passwordGroup = document.getElementById('cpfInputGroup');
-        const passwordInput = document.getElementById('cpfInput');
-        const accessButton = document.getElementById('accessButton');
-        const cancelButton = document.getElementById('cancelButton');
-
-        modalTitle.textContent = title;
-        modalMessage.innerHTML = message;
-        passwordInput.value = '';
-        
-        // Esconde o campo de senha
-        passwordGroup.style.display = 'none';
-
-        if (isConfirm) {
-            accessButton.textContent = 'Confirmar';
-            accessButton.onclick = () => {
-                modal.style.display = 'none';
-                if (callback) callback(true);
-            };
-            cancelButton.style.display = 'inline-block';
-            cancelButton.onclick = () => {
-                modal.style.display = 'none';
-                if (callback) callback(false);
-            };
-        } else {
-            accessButton.textContent = 'OK';
-            accessButton.onclick = () => {
-                modal.style.display = 'none';
-                if (callback) callback();
-            };
-            cancelButton.style.display = 'none';
-        }
-        modal.style.display = 'flex';
-    }
-
-    // --- FUNÇÕES DE SETUP E AUTENTICAÇÃO ---
-
-    async function initializeFirebase() {
-        try {
-            // setLogLevel('debug'); // Usar para debug
-            app = initializeApp(firebaseConfig);
-            db = getFirestore(app);
-            auth = getAuth(app);
-
-            // Tenta logar com o token de sessão ou anonimamente
-            if (initialAuthToken) {
-                await signInWithCustomToken(auth, initialAuthToken);
-            } else {
-                await signInAnonymously(auth);
-            }
-        } catch (error) {
-            console.error("Erro na inicialização ou autenticação do Firebase:", error);
-            showModal('Erro Crítico', `Falha ao conectar ao servidor. Por favor, tente novamente.`, false);
-        }
-    }
-
-    function setupAuthListener() {
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                USER_ID = user.uid;
-                await loadUserList();
-                restoreLogin(); 
-            } else {
-                // Caso não haja usuário autenticado, exibe o modal de login
-                document.getElementById('authModal').style.display = 'flex';
-            }
-        });
-    }
-
-    async function loadUserList() {
-        // A coleção de usuários agora é a mesma usada em `gestao_usuarios.html`
-        const usersCollectionRef = collection(db, `artifacts/${appId}/public/data/app_users`);
-        
-        // Inicialização de usuários padrão se a coleção estiver vazia
-        const snapshot = await getDocs(usersCollectionRef);
-        if (snapshot.empty) {
-            console.log("Inicializando lista de usuários padrão...");
-            for (const name of DEFAULT_USERS) {
-                const isPowerUser = name === 'Renan Martins' || name === 'ADM';
-                
-                // Cria o ID do documento baseado no nome (igual ao gestao_usuarios.html)
-                const docId = name.toUpperCase().replace(/\s/g, '_');
-
-                await setDoc(doc(usersCollectionRef, docId), {
-                    name: formatName(name),
-                    isPowerUser: isPowerUser
-                });
-            }
-        }
-
-        // Snapshot Listener para a lista de usuários
-        onSnapshot(usersCollectionRef, (snapshot) => {
-            USER_LIST = [];
-            snapshot.forEach(doc => {
-                USER_LIST.push(doc.data());
-            });
-            renderUserDropdown(USER_LIST);
-        }, (error) => {
-            console.error("Erro ao carregar lista de usuários:", error);
-            showModal('Erro de Sincronização', 'Não foi possível carregar a lista de usuários. Recarregue a página.', false);
-        });
-    }
-
-    function renderUserDropdown(users) {
-        const select = document.getElementById('userNameSelect');
-        const lastUser = localStorage.getItem('lastUser');
-        
-        select.innerHTML = '<option value="" disabled selected>Selecione seu nome</option>';
-        
-        // Garante que a lista de usuários está em ordem alfabética para melhor UX
-        const sortedUsers = [...users].sort((a, b) => a.name.localeCompare(b.name));
-
-        sortedUsers.forEach(user => {
-            const option = document.createElement('option');
-            option.value = user.name;
-            option.textContent = user.name;
-            if (user.name === lastUser) {
-                option.selected = true;
-            }
-            select.appendChild(option);
-        });
-        
-        // Dispara a checagem se o último usuário selecionado é um Power User
-        if (lastUser) {
-            checkIfPowerUser(lastUser);
-        }
-    }
-
-    function checkIfPowerUser(selectedName) {
-        const user = USER_LIST.find(u => u.name === selectedName);
-        const isPower = user && user.isPowerUser;
-        const cpfGroup = document.getElementById('cpfInputGroup');
-        
-        if (isPower) {
-            cpfGroup.style.display = 'block';
-        } else {
-            cpfGroup.style.display = 'none';
-            document.getElementById('cpfInput').value = ''; 
-        }
-        return isPower;
-    }
-
-    function authenticateUser() {
-        const userNameSelect = document.getElementById('userNameSelect');
-        const selectedName = userNameSelect.value.trim();
-        const passwordInput = document.getElementById('cpfInput').value.trim();
-        const user = USER_LIST.find(u => u.name === selectedName);
-
-        if (!selectedName) {
-            showModal('Acesso Negado', 'Por favor, selecione seu nome para continuar.', false);
-            return;
-        }
-
-        const requiresPassword = user && user.isPowerUser;
-
-        if (requiresPassword) {
-            if (passwordInput.toLowerCase() !== AUTHORIZED_PASSWORD) {
-                showModal('Acesso Negado', 'Senha incorreta.', false);
-                return;
-            }
-        }
-
-        CURRENT_USER = selectedName;
-        IS_POWER_USER = requiresPassword; // Define permissão baseada na senha
-        localStorage.setItem('lastUser', CURRENT_USER);
-
-        document.getElementById('authModal').style.display = 'none';
-        document.getElementById('mainContent').style.display = 'block';
-
-        document.getElementById('solicitanteInput').value = CURRENT_USER;
-        updateUserDisplay(CURRENT_USER);
-        
-        setupRequestListener(); // Inicia a escuta de solicitações
-    }
-    
-    function restoreLogin() {
-        const lastUser = localStorage.getItem('lastUser');
-        if (lastUser) {
-            // Tenta simular o login para um usuário existente
-            const user = USER_LIST.find(u => u.name === lastUser);
-            if (user) {
-                CURRENT_USER = user.name;
-                IS_POWER_USER = user.isPowerUser;
-                
-                // Se for power user, forçamos a reautenticação (para inserir senha)
-                if (IS_POWER_USER) {
-                    document.getElementById('authModal').style.display = 'flex';
-                    document.getElementById('modalTitle').textContent = 'Reautenticação Necessária';
-                    document.getElementById('modalMessage').innerHTML = `Seu usuário (${CURRENT_USER}) requer a senha para acesso completo.`;
-                    document.getElementById('cpfInputGroup').style.display = 'block';
-                    document.getElementById('accessButton').onclick = authenticateUser;
-                    document.getElementById('cancelButton').style.display = 'none';
-                    return;
-                }
-                
-                document.getElementById('authModal').style.display = 'none';
-                document.getElementById('mainContent').style.display = 'block';
-                document.getElementById('solicitanteInput').value = CURRENT_USER;
-                updateUserDisplay(CURRENT_USER);
-                setupRequestListener();
-                return;
-            }
-        }
-        // Se não houver usuário ou o usuário for inválido, exibe o modal de login padrão
-        document.getElementById('authModal').style.display = 'flex';
-        document.getElementById('modalTitle').textContent = 'Bem-vindo(a) à Gestão de Automações';
-        document.getElementById('modalMessage').innerHTML = 'Por favor, selecione seu nome completo para começar:';
-        document.getElementById('accessButton').onclick = authenticateUser;
-        document.getElementById('cancelButton').style.display = 'none';
-    }
-
-
-    function logoutAndSwitchUser() {
-        CURRENT_USER = '';
-        IS_POWER_USER = false;
-        localStorage.removeItem('lastUser');
-        
-        document.getElementById('mainContent').style.display = 'none';
-        
-        // Resetar o modal para login/seleção
-        document.getElementById('userNameSelect').value = '';
-        document.getElementById('cpfInput').value = '';
-        document.getElementById('cpfInputGroup').style.display = 'none';
-        document.getElementById('solicitanteInput').value = ''; 
-        
-        restoreLogin(); // Volta para o processo de login
-    }
-
-    function updateUserDisplay(userName) {
-        const initial = userName.trim().toUpperCase().charAt(0);
-        document.getElementById('userNameDisplay').textContent = userName;
-        document.getElementById('userInitial').textContent = initial;
-        document.getElementById('userControl').style.display = 'flex';
-        
-        // Mostra o link para gestão de usuários apenas para Power Users
-        const userManagementLink = document.getElementById('userManagementLink');
-        userManagementLink.style.display = IS_POWER_USER ? 'block' : 'none';
-    }
-
-    function canEditRestrictedFields(user) {
-        // Verifica se o usuário logado atualmente é um Power User (Renan Martins ou ADM)
-        return IS_POWER_USER; 
-    }
-
-    function canDelete(status) {
-        const cleanStatus = status.toUpperCase().trim();
-        
-        // Power Users podem deletar qualquer item. Outros só podem deletar Backlog
-        if (IS_POWER_USER) return true; 
-
-        if (cleanStatus === 'BACKLOG') return true;
-        
-        return false;
-    }
-
-    // --- FIREBASE CRUD E LISTENER ---
-
-    function getAutomationCollectionRef() {
-        // Caminho privado por usuário (melhor para solicitações individuais)
-        return collection(db, `artifacts/${appId}/users/${USER_ID}/automation_requests`);
-    }
-
-    let unsubscribeRequests = null;
-
-    function setupRequestListener() {
-        if (!db || !USER_ID) return;
-        
-        // Se já houver um listener, desinscreve
-        if (unsubscribeRequests) {
-            unsubscribeRequests();
-        }
-
-        const requestsCollectionRef = getAutomationCollectionRef();
-        
-        // Adiciona um listener em tempo real (onSnapshot)
-        unsubscribeRequests = onSnapshot(requestsCollectionRef, (snapshot) => {
-            const requests = [];
-            snapshot.forEach(doc => {
-                requests.push({ id: doc.id, ...doc.data() });
-            });
-            // Ordena as solicitações: Em Processo e Backlog primeiro, Finalizado por último.
-            requests.sort((a, b) => {
-                const statusOrder = { 'Em Processo': 1, 'Backlog': 2, 'Finalizado': 3 };
-                return statusOrder[a.status] - statusOrder[b.status];
-            });
-            
-            renderTable(requests);
-        }, (error) => {
-            console.error("Erro ao carregar solicitações:", error);
-            showModal('Erro de Sincronização', 'Não foi possível carregar a lista de solicitações. Recarregue a página.', false);
-        });
-    }
-
-    // --- FUNÇÕES DE DATA E FORMATAÇÃO ---
-
-    function formatDate(date) {
-        if (!date) return '';
-        if (date.seconds) { // Firestore Timestamp
-            return new Date(date.seconds * 1000).toLocaleDateString('pt-BR');
-        }
-        if (typeof date === 'string' && date.includes('/')) return date;
-        const d = new Date(date);
-        return d.toLocaleDateString('pt-BR');
-    }
-    
-    // --- FUNÇÕES DE RENDERIZAÇÃO ---
-    
-    function renderTable(requests) {
-        const tbody = document.getElementById('automationTableBody');
-        tbody.innerHTML = '';
-        const canEditRestricted = canEditRestrictedFields(CURRENT_USER); 
-
-        if (requests.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: #6a6a6a;">Nenhuma solicitação em andamento.</td></tr>'; 
-            return;
-        }
-
-        requests.forEach((req, index) => {
-            const tr = document.createElement('tr');
-            
-            // Título (Editável por todos)
-            tr.appendChild(createEditableCell(req.id, req.title, 'title', false));
-            // Solicitante (Editável por todos, mas formatado)
-            tr.appendChild(createEditableCell(req.id, req.solicitant || '', 'solicitant', false)); 
-            
-            // Status (Editável apenas por Power Users)
-            tr.appendChild(createStatusCell(req, req.id, canEditRestricted));
-            
-            // Frente (Editável por todos)
-            tr.appendChild(createEditableCell(req.id, req.team || '', 'team', false));
-
-            // Data Criação (Read Only - do Firestore Timestamp)
-            tr.appendChild(createReadOnlyCell(formatDate(req.date)));
-
-            // Data Conclusão (Editável apenas por Power Users)
-            const conclusionDateCell = createEditableCell(req.id, req.conclusionDate || '', 'conclusionDate', !canEditRestricted);
-            if (canEditRestricted) conclusionDateCell.className = 'editable-renan';
-            tr.appendChild(conclusionDateCell);
-            
-            // Data Atualização (Read Only)
-            tr.appendChild(createReadOnlyCell(req.updateDate || '-'));
-
-            // Link Arquivo (Editável apenas por Power Users)
-            const linkFileCell = createLinkFileCell(req, req.id, !canEditRestricted);
-            tr.appendChild(linkFileCell);
-
-            const actionsCell = document.createElement('td');
-            
-            if (canDelete(req.status)) {
-                const deleteBtn = document.createElement('button');
-                deleteBtn.textContent = 'Excluir';
-                deleteBtn.className = 'action-btn delete-btn';
-                deleteBtn.onclick = () => confirmDeleteRequest(req.id, req.title, req.status);
-                actionsCell.appendChild(deleteBtn);
-            }
-            tr.appendChild(actionsCell);
-
-            tbody.appendChild(tr);
-        });
-    }
-
-    function createReadOnlyCell(content) {
-        const cell = document.createElement('td');
-        cell.textContent = content;
-        return cell;
-    }
-
-    function createEditableCell(docId, content, fieldName, isRestricted) {
-        const cell = document.createElement('td');
-        cell.textContent = content;
-        cell.setAttribute('contenteditable', isRestricted ? 'false' : 'true');
-        
-        if (!isRestricted) {
-            cell.onblur = (e) => {
-                let newValue = e.target.textContent;
-                if (fieldName === 'solicitant') {
-                    newValue = formatName(newValue); 
-                }
-                updateRequest(docId, fieldName, newValue);
-            }
-        }
-        
-        return cell;
-    }
-    
-    function createStatusCell(req, docId, canEdit) {
-        const statusCell = document.createElement('td');
-        const statusClass = `status-${req.status.toLowerCase().replace(' ', '-')}`;
-
-        if (canEdit) {
-            const select = document.createElement('select');
-            select.className = `status-select ${statusClass}`;
-            
-            STATUSES.forEach(status => {
-                const option = document.createElement('option');
-                option.value = status;
-                option.textContent = status;
-                if (req.status === status) {
-                    option.selected = true;
-                }
-                select.appendChild(option);
-            });
-
-            select.onchange = (e) => {
-                updateRequest(docId, 'status', e.target.value);
-                e.target.className = `status-select status-${e.target.value.toLowerCase().replace(' ', '-')}`;
-            };
-            statusCell.appendChild(select);
-
-        } else {
-            const span = document.createElement('span');
-            span.textContent = req.status;
-            span.className = `status-display ${statusClass}`; 
-            statusCell.appendChild(span);
-        }
-        
-        return statusCell;
-    }
-
-    function createLinkFileCell(req, docId, isRestricted) {
-        const cell = document.createElement('td');
-        cell.className = 'file-link-cell';
-        const canEdit = !isRestricted; 
-        const fileLink = req.fileLink ? req.fileLink.trim() : '';
-
-        // Se for Power User (Pode Editar)
-        if (canEdit) {
-            cell.className += ' editable-renan';
-            cell.setAttribute('contenteditable', 'true');
-            cell.textContent = fileLink || 'Adicionar link...';
-            
-            cell.onblur = (e) => {
-                updateRequest(docId, 'fileLink', e.target.textContent);
-            };
-            
-        // Se NÃO for Power User (Visualização Clicável)
-        } else if (fileLink !== '') {
-            const link = document.createElement('a');
-            const fullUrl = fileLink.startsWith('http') ? fileLink : `http://${fileLink}`;
-            link.href = fullUrl;
-            link.target = '_blank';
-            link.textContent = 'Acessar Link'; 
-            link.title = fileLink;
-            
-            cell.appendChild(link);
-            cell.setAttribute('contenteditable', 'false');
-        } else {
-            // Não tem link
-            cell.textContent = '-';
-            cell.setAttribute('contenteditable', 'false');
-        }
-        
-        return cell;
-    }
-
-    // --- FUNÇÕES CRUD DO FIRESTORE ---
-
-    async function addSolicitacao() {
-        if (!db || !USER_ID) {
-            showModal('Erro', 'O Firebase não está pronto. Tente novamente.', false);
-            return;
-        }
-
-        const titleInput = document.getElementById('solicitacaoInput');
-        const messageDiv = document.getElementById('message');
-
-        const title = titleInput.value.trim();
-        const solicitant = CURRENT_USER; 
-
-        if (!title || !solicitant) {
-            messageDiv.textContent = 'Por favor, preencha o Título da Automação e garanta que seu nome está preenchido.';
-            return;
-        }
-        messageDiv.textContent = '';
-
-        try {
-            await addDoc(getAutomationCollectionRef(), {
-                title: title,
-                solicitant: solicitant,
-                date: serverTimestamp(), // Usa o timestamp do servidor
-                status: 'Backlog',
-                team: '',
-                conclusionDate: '',
-                updateDate: new Date().toLocaleDateString('pt-BR'), 
-                fileLink: ''
-            });
-
-            titleInput.value = '';
-            // A tabela será re-renderizada automaticamente pelo onSnapshot
-        } catch (error) {
-            console.error("Erro ao adicionar solicitação:", error);
-            showModal('Erro de Dados', 'Não foi possível adicionar a solicitação.', false);
-        }
-    }
-
-    async function updateRequest(docId, field, value) {
-        if (!db || !USER_ID) return;
-        
-        let updateData = {
-            [field]: value.trim()
-        };
-        
-        // Atualiza a data de atualização em qualquer alteração de campo relevante
-        if (field !== 'updateDate') {
-             updateData.updateDate = new Date().toLocaleDateString('pt-BR');
-        }
-
-        try {
-            const docRef = doc(getAutomationCollectionRef(), docId);
-            await updateDoc(docRef, updateData);
-            // A tabela será re-renderizada automaticamente pelo onSnapshot
-        } catch (error) {
-            console.error("Erro ao atualizar solicitação:", error);
-            showModal('Erro de Dados', 'Não foi possível atualizar a solicitação.', false);
-        }
-    }
-
-    function confirmDeleteRequest(docId, title, status) {
-        if (!canDelete(status)) {
-            showModal('Permissão Negada', 'A exclusão de tarefas "Em Processo" ou "Finalizadas" é restrita a usuários autorizados (Renan Martins ou ADM).', false);
-            return;
-        }
-        
-        showModal('Confirmar Exclusão', 
-            `Tem certeza que deseja excluir a solicitação <strong>"${title}"</strong>?`, 
-            true, 
-            (result) => {
-                if (result) {
-                    deleteRequest(docId);
-                }
-            }
-        );
-    }
-    
-    async function deleteRequest(docId) {
-        if (!db || !USER_ID) return;
-        
-        try {
-            await deleteDoc(doc(getAutomationCollectionRef(), docId));
-            // A tabela será re-renderizada automaticamente pelo onSnapshot
-        } catch (error) {
-            console.error("Erro ao excluir solicitação:", error);
-            showModal('Erro de Dados', 'Não foi possível excluir a solicitação.', false);
-        }
-    }
-    
-    // Função para abrir a nova página de gestão de usuários
-    function openUserManagement() {
-        if (IS_POWER_USER) {
-             // Redireciona para o arquivo de gestão de usuários
-            window.location.href = 'gestao_usuarios.html';
-        } else {
-             showModal('Permissão Negada', 'A gestão de usuários é restrita a Renan Martins e ADM.', false);
-        }
-    }
-
-
-    window.onload = () => {
-        // Inicializa o Firebase
-        initializeFirebase();
-        // Configura o listener de autenticação para iniciar o resto
-        setupAuthListener();
-        
-        // Atribui eventos aos botões e inputs
-        document.getElementById('userNameSelect').onchange = (e) => checkIfPowerUser(e.target.value);
-        document.getElementById('accessButton').onclick = authenticateUser;
-        document.getElementById('logoutButton').onclick = logoutAndSwitchUser;
-        document.getElementById('userManagementLink').onclick = openUserManagement;
-        
-        // Prepara o modal para ser usado como painel de controle
-        document.getElementById('modalTitle').textContent = 'Bem-vindo(a) à Gestão de Automações';
-        document.getElementById('modalMessage').innerHTML = 'Por favor, selecione seu nome completo para começar:';
-        document.getElementById('cancelButton').style.display = 'none'; // Esconde o cancelar no login inicial
-    };
-    
-</script>
-
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -622,9 +10,11 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             padding: 30px; 
             background-color: #e9eef2;
+            margin: 0;
+            min-height: 100vh;
         }
         .container { 
-            max-width: 1300px; /* Mantido do código original */
+            max-width: 1300px; 
             margin: 0 auto; 
             background-color: white; 
             padding: 40px; 
@@ -642,7 +32,7 @@
             position: absolute;
             top: 20px;
             right: 20px;
-            display: flex;
+            display: none; /* Inicia oculto */
             align-items: center;
             background-color: #f0f0f0;
             padding: 8px 15px;
@@ -680,23 +70,25 @@
             border-radius: 8px;
             background-color: #f5f5f5;
         }
+        .input-form label { font-weight: 600; color: #333; }
         .input-form input[type="text"] {
             padding: 10px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box;
         }
         .input-form button {
             padding: 10px; background-color: #0070d2; color: white; border: none; border-radius: 4px; 
-            cursor: pointer; transition: background-color 0.2s;
+            cursor: pointer; transition: background-color 0.2s; align-self: end;
         }
         .input-form button:hover { background-color: #005aa3; }
 
         /* Tabela */
         #automationTable { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.9em; }
-        #automationTable th, #automationTable td { padding: 10px 8px; text-align: left; border-bottom: 1px solid #e0e0e0; } 
+        #automationTable th, #automationTable td { padding: 10px 8px; text-align: left; border-bottom: 1px solid #e0e0e0; vertical-align: middle; } 
         #automationTable th { background-color: #0070d2; color: white; font-weight: 600; font-size: 1em; }
         #automationTable tr:nth-child(even) { background-color: #f9f9f9; }
         
         /* Campos Editáveis */
         [contenteditable="true"]:focus { outline: 2px solid #0070d2; background-color: #e6f7ff; }
+        [contenteditable="true"] { cursor: text; }
         .editable-renan { background-color: #f0faff; border: 1px solid #0070d2; }
         .editable-renan[contenteditable="false"] { background-color: transparent; border: none; }
         
@@ -705,6 +97,7 @@
             padding: 6px; border-radius: 4px; border: 1px solid #ccc; font-size: 0.9em; font-weight: bold;
             -webkit-appearance: none; -moz-appearance: none; appearance: none; cursor: default;
             display: inline-block; box-sizing: border-box;
+            min-width: 100px;
         }
         .status-select { cursor: pointer; }
         .status-display { border: none !important; }
@@ -724,7 +117,7 @@
         .file-link-cell a { color: #0070d2; text-decoration: none; font-weight: bold; }
         .file-link-cell a:hover { text-decoration: underline; }
 
-        /* Modal de Autenticação/Mensagem (Atualizado para ser um modal genérico) */
+        /* Modal de Autenticação/Mensagem (CRÍTICO) */
         #authModal {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
             background: rgba(0, 0, 0, 0.6); display: none; justify-content: center; align-items: center; z-index: 1000;
@@ -748,106 +141,748 @@
         #cpfInputGroup { display: none; }
         #mainContent { display: none; }
         
-        /* Estilos específicos do novo dropdown */
-        #userNameSelect {
-             border: 1px solid #ccc;
-             padding: 10px;
-             background-color: white;
-             appearance: none; /* remove padrão */
-             -webkit-appearance: none;
-             -moz-appearance: none;
-             background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path fill="%23333" d="M8 12l-6-6h12z"/></svg>');
-             background-repeat: no-repeat;
-             background-position: right 10px top 50%;
-             padding-right: 30px;
+        /* Estilos responsivos */
+        @media (max-width: 1000px) {
+            #automationTable th:nth-child(4), #automationTable td:nth-child(4), /* Frente/Time */
+            #automationTable th:nth-child(6), #automationTable td:nth-child(6), /* Data Conclusão */
+            #automationTable th:nth-child(7), #automationTable td:nth-child(7) { /* Data Atualização */
+                display: none;
+            }
         }
-        
         @media (max-width: 768px) {
             .container { padding: 20px; }
             .input-form { grid-template-columns: 1fr; }
+            .input-form button { margin-top: 15px; }
+            body { padding: 15px; }
+            #userControl { top: 10px; right: 10px; padding: 5px 10px; }
             #automationTable th, #automationTable td { font-size: 0.8em; padding: 8px 5px; }
-            #userControl { position: static; margin-bottom: 20px; width: 100%; align-items: center; flex-direction: row; justify-content: space-between; }
-            .user-options { margin-top: 0; display: flex; }
+            
+            /* Oculta mais colunas em mobile */
+            #automationTable th:nth-child(2), #automationTable td:nth-child(2), /* Solicitante */
+            #automationTable th:nth-child(5), #automationTable td:nth-child(5) { /* Data Criação */
+                display: none;
+            }
         }
-
     </style>
 </head>
 <body>
 
-    <!-- Modal de Autenticação e Mensagens Customizadas -->
+    <!-- MODAL DE AUTENTICAÇÃO (CRÍTICO: Onde o userNameSelect deve estar) -->
     <div id="authModal">
         <div class="modal-content">
-            <h3 id="modalTitle">Bem-vindo(a) à Gestão de Automações</h3>
-            <p id="modalMessage">Por favor, selecione seu nome completo para começar:</p>
+            <h3 id="modalTitle">Carregando...</h3>
+            <p id="modalMessage">Aguarde a inicialização do sistema.</p>
             
-            <select id="userNameSelect" required>
-                <option value="" disabled selected>Selecione seu nome</option>
+            <!-- ELEMENTO CHAVE: DROPDOWN DE SELEÇÃO DE USUÁRIO -->
+            <select id="userNameSelect">
+                <!-- As opções serão preenchidas pelo JavaScript em renderUserDropdown -->
+                <option value="" disabled selected>Carregando nomes...</option>
             </select>
-            
+
             <div id="cpfInputGroup">
-                <input type="password" id="cpfInput" placeholder="Digite a Senha de Acesso (Renan/ADM)" required> 
+                <input type="password" id="cpfInput" placeholder="Digite a senha de Power User" />
             </div>
-            
+
             <div>
-                <button id="accessButton" style="width: 100%;">Acessar</button>
-                <button id="cancelButton" style="display: none;"></button>
+                <button id="accessButton" class="action-btn">Acessar</button>
+                <button id="cancelButton" class="action-btn">Cancelar</button>
             </div>
         </div>
     </div>
-
+    
+    <!-- CONTEÚDO PRINCIPAL (Inicia oculto) -->
     <div class="container" id="mainContent">
         
-        <div id="userControl">
+        <!-- CONTROLE DE USUÁRIO (Canto Superior Direito) -->
+        <div id="userControl" style="display: none;">
             <div class="user-info">
                 <span id="userNameDisplay">Usuário</span>
-                <span class="user-icon" id="userInitial">U</span>
+                <div class="user-icon" id="userInitial">U</div>
             </div>
             <div class="user-options">
-                <!-- O link para o arquivo gestao_usuarios.html -->
-                <a href="#" id="userManagementLink" onclick="openUserManagement(event)" style="display: none;">Incluir/Excluir Usuários</a>
-                <button id="logoutButton">Trocar Usuário / Sair</button>
+                <a href="#" id="userManagementLink" style="display: none;">Gerenciar Usuários</a>
+                <button id="logoutButton">Trocar Usuário</button>
             </div>
         </div>
 
-        <h1>Automatização</h1>
-        <h2>Frente - Gestão de Solicitações</h2>
+        <h1>Gestão de Solicitações de Automação</h1>
+        <h2>Painel de Acompanhamento e Priorização de Demandas</h2>
+
+        <!-- FORMULÁRIO DE NOVA SOLICITAÇÃO -->
+        <div class="input-form">
+            <div style="grid-column: 1 / 3;">
+                <label for="solicitacaoInput">Título da Automação (Necessidade/Objetivo Principal):</label>
+                <input type="text" id="solicitacaoInput" placeholder="Ex: Criação de relatório diário de vendas" maxlength="150">
+            </div>
+            <div style="display: none;">
+                <label for="solicitanteInput">Solicitante (Automático):</label>
+                <input type="text" id="solicitanteInput" readonly>
+            </div>
+            <button onclick="addSolicitacao()">Adicionar Solicitação</button>
+        </div>
+        <p id="message" style="color: #c53929; text-align: center; margin-top: -15px; margin-bottom: 25px; font-weight: bold;"></p>
+
+        <!-- TABELA DE SOLICITAÇÕES -->
+        <div class="table-responsive">
+            <table id="automationTable">
+                <thead>
+                    <tr>
+                        <th>Título</th>
+                        <th>Solicitante</th>
+                        <th>Status</th>
+                        <th>Frente/Time</th>
+                        <th>Criação</th>
+                        <th class="editable-renan">Conclusão</th>
+                        <th>Atualização</th>
+                        <th class="editable-renan">Link Arquivo</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="automationTableBody">
+                    <!-- Conteúdo gerado pelo JS -->
+                    <tr><td colspan="9" style="text-align: center; color: #6a6a6a;">Carregando solicitações...</td></tr>
+                </tbody>
+            </table>
+        </div>
         
-        <div class="tool-section">
-
-            <h3>Adicionar Nova Solicitação</h3>
-            <div class="input-form">
-                <input type="text" id="solicitacaoInput" placeholder="Título da Automação (Obrigatório)" required>
-                <!-- Campo de solicitante preenchido automaticamente, mas ReadOnly -->
-                <input type="text" id="solicitanteInput" placeholder="Solicitante" required readonly style="background-color: #e9ecef;">
-                <button onclick="addSolicitacao()">Adicionar</button>
-            </div>
-            
-            <div id="message" style="color: red; margin-bottom: 10px;"></div>
-
-            <h3>Acompanhamento de Solicitações</h3>
-            <div style="overflow-x: auto;">
-                <table id="automationTable">
-                    <thead>
-                        <tr>
-                            <th>Título da Automação</th>
-                            <th>Solicitante</th>
-                            <th>Status</th>
-                            <th>Frente</th>
-                            <th style="min-width: 90px;">Data Criação</th>
-                            <th style="min-width: 90px;">Data Conclusão</th>
-                            <th style="min-width: 90px;">Data Atualização</th>
-                            <th style="min-width: 130px;">Link Arquivo</th> 
-                            <th>Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody id="automationTableBody">
-                        <!-- Conteúdo dinâmico -->
-                    </tbody>
-                </table>
-            </div>
-            
-        </div>
-
     </div>
+
+    <!-- SCRIPTS FIREBASE E LÓGICA DA APLICAÇÃO -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Variáveis Globais do Canvas (MANDATÓRIO USAR)
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // Configurações e Inicialização do Firebase
+        let app, db, auth;
+        let CURRENT_USER = '';
+        let USER_LIST = [];
+        let IS_POWER_USER = false;
+        let USER_ID = null; // ID do Firebase, usado para o caminho do Firestore
+
+        // Senha de acesso para Renan Martins e ADM
+        const AUTHORIZED_PASSWORD = 'salmos93';
+        const STATUSES = ['Backlog', 'Em Processo', 'Finalizado'];
+        const DEFAULT_USERS = ['Vinicius', 'Diego', 'Matheus', 'Renato', 'Lucas', 'Nedson', 'Renan Martins', 'ADM'];
+
+        function formatName(name) {
+            if (!name) return '';
+            let cleanedName = name.trim().toLowerCase();
+            return cleanedName.split(' ').map(word => {
+                if (word.length === 0) return '';
+                return word.charAt(0).toUpperCase() + word.slice(1);
+            }).join(' ');
+        }
+        
+        // --- LÓGICA DE MODAL (Substitui alert/confirm) ---
+        function showModal(title, message, isConfirm, callback) {
+            const modal = document.getElementById('authModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalMessage = document.getElementById('modalMessage');
+            const passwordGroup = document.getElementById('cpfInputGroup');
+            const passwordInput = document.getElementById('cpfInput');
+            const accessButton = document.getElementById('accessButton');
+            const cancelButton = document.getElementById('cancelButton');
+            const userNameSelect = document.getElementById('userNameSelect');
+
+            modalTitle.textContent = title;
+            modalMessage.innerHTML = message;
+            passwordInput.value = '';
+            
+            // Esconde o campo de senha por padrão, a não ser que o checkIfPowerUser o chame
+            passwordGroup.style.display = 'none';
+
+            // Oculta/Exibe o dropdown de nome no modal
+            if (title === 'Reautenticação Necessária' || title === 'Bem-vindo(a) à Gestão de Automações') {
+                 userNameSelect.style.display = 'block';
+                 // Garante que o dropdown não aparece se a mensagem for um simples 'Erro'
+            } else {
+                 userNameSelect.style.display = 'none';
+            }
+
+
+            if (isConfirm) {
+                accessButton.textContent = 'Confirmar';
+                accessButton.onclick = () => {
+                    modal.style.display = 'none';
+                    if (callback) callback(true);
+                };
+                cancelButton.style.display = 'inline-block';
+                cancelButton.onclick = () => {
+                    modal.style.display = 'none';
+                    if (callback) callback(false);
+                };
+            } else {
+                accessButton.textContent = 'OK';
+                accessButton.onclick = () => {
+                    modal.style.display = 'none';
+                    if (callback) callback();
+                };
+                cancelButton.style.display = 'none';
+                
+                // Se for um erro simples, o OK ocupa 100%
+                if (title === 'Erro Crítico' || title === 'Erro de Dados' || title === 'Permissão Negada' || title === 'Erro de Sincronização') {
+                    accessButton.style.width = '100%';
+                } else {
+                     accessButton.style.width = 'calc(50% - 5px)';
+                }
+            }
+            modal.style.display = 'flex';
+        }
+
+        // --- FUNÇÕES DE SETUP E AUTENTICAÇÃO ---
+
+        async function initializeFirebase() {
+            try {
+                // setLogLevel('debug'); // Usar para debug
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                // Tenta logar com o token de sessão ou anonimamente
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (error) {
+                console.error("Erro na inicialização ou autenticação do Firebase:", error);
+                showModal('Erro Crítico', `Falha ao conectar ao servidor. Por favor, tente novamente.`, false);
+            }
+        }
+
+        function setupAuthListener() {
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    USER_ID = user.uid;
+                    await loadUserList(); // <--- CHAVE: Carrega usuários após o login
+                    restoreLogin(); 
+                } else {
+                    // Caso não haja usuário autenticado, exibe o modal de login
+                    document.getElementById('authModal').style.display = 'flex';
+                }
+            });
+        }
+
+        async function loadUserList() {
+            // A coleção de usuários agora é a mesma usada em `gestao_usuarios.html`
+            const usersCollectionRef = collection(db, `artifacts/${appId}/public/data/app_users`);
+            
+            // Inicialização de usuários padrão se a coleção estiver vazia
+            try {
+                const snapshot = await getDocs(usersCollectionRef);
+                if (snapshot.empty) {
+                    console.log("Inicializando lista de usuários padrão...");
+                    for (const name of DEFAULT_USERS) {
+                        const isPowerUser = name === 'Renan Martins' || name === 'ADM';
+                        
+                        // Cria o ID do documento baseado no nome (igual ao gestao_usuarios.html)
+                        const docId = name.toUpperCase().replace(/\s/g, '_');
+
+                        await setDoc(doc(usersCollectionRef, docId), {
+                            name: formatName(name),
+                            isPowerUser: isPowerUser
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error("Erro ao verificar/inicializar lista de usuários:", error);
+            }
+
+            // Snapshot Listener para a lista de usuários
+            onSnapshot(usersCollectionRef, (snapshot) => {
+                USER_LIST = [];
+                snapshot.forEach(doc => {
+                    USER_LIST.push(doc.data());
+                });
+                renderUserDropdown(USER_LIST); // <--- RENDERIZA OS NOMES AQUI
+            }, (error) => {
+                console.error("Erro ao carregar lista de usuários:", error);
+                showModal('Erro de Sincronização', 'Não foi possível carregar a lista de usuários. Recarregue a página.', false);
+            });
+        }
+
+        function renderUserDropdown(users) {
+            const select = document.getElementById('userNameSelect');
+            const lastUser = localStorage.getItem('lastUser');
+            
+            select.innerHTML = '<option value="" disabled selected>Selecione seu nome</option>';
+            
+            // Garante que a lista de usuários está em ordem alfabética para melhor UX
+            const sortedUsers = [...users].sort((a, b) => a.name.localeCompare(b.name));
+
+            sortedUsers.forEach(user => {
+                const option = document.createElement('option');
+                option.value = user.name;
+                option.textContent = user.name;
+                if (user.name === lastUser) {
+                    option.selected = true;
+                }
+                select.appendChild(option);
+            });
+            
+            // Dispara a checagem se o último usuário selecionado é um Power User
+            if (lastUser) {
+                checkIfPowerUser(lastUser);
+            }
+        }
+
+        function checkIfPowerUser(selectedName) {
+            const user = USER_LIST.find(u => u.name === selectedName);
+            const isPower = user && user.isPowerUser;
+            const cpfGroup = document.getElementById('cpfInputGroup');
+            
+            if (isPower) {
+                cpfGroup.style.display = 'block';
+            } else {
+                cpfGroup.style.display = 'none';
+                document.getElementById('cpfInput').value = ''; 
+            }
+            return isPower;
+        }
+
+        function authenticateUser() {
+            const userNameSelect = document.getElementById('userNameSelect');
+            const selectedName = userNameSelect.value.trim();
+            const passwordInput = document.getElementById('cpfInput').value.trim();
+            const user = USER_LIST.find(u => u.name === selectedName);
+
+            if (!selectedName) {
+                showModal('Acesso Negado', 'Por favor, selecione seu nome para continuar.', false);
+                return;
+            }
+
+            const requiresPassword = user && user.isPowerUser;
+
+            if (requiresPassword) {
+                if (passwordInput.toLowerCase() !== AUTHORIZED_PASSWORD) {
+                    showModal('Acesso Negado', 'Senha incorreta.', false);
+                    return;
+                }
+            }
+
+            CURRENT_USER = selectedName;
+            IS_POWER_USER = requiresPassword; // Define permissão baseada na senha
+            localStorage.setItem('lastUser', CURRENT_USER);
+
+            document.getElementById('authModal').style.display = 'none';
+            document.getElementById('mainContent').style.display = 'block';
+
+            document.getElementById('solicitanteInput').value = CURRENT_USER;
+            updateUserDisplay(CURRENT_USER);
+            
+            setupRequestListener(); // Inicia a escuta de solicitações
+        }
+        
+        function restoreLogin() {
+            const lastUser = localStorage.getItem('lastUser');
+            if (lastUser) {
+                // Tenta simular o login para um usuário existente
+                const user = USER_LIST.find(u => u.name === lastUser);
+                if (user) {
+                    CURRENT_USER = user.name;
+                    IS_POWER_USER = user.isPowerUser;
+                    
+                    // Se for power user, forçamos a reautenticação (para inserir senha)
+                    if (IS_POWER_USER) {
+                        document.getElementById('authModal').style.display = 'flex';
+                        document.getElementById('modalTitle').textContent = 'Reautenticação Necessária';
+                        document.getElementById('modalMessage').innerHTML = `Seu usuário (${CURRENT_USER}) requer a senha para acesso completo.`;
+                        document.getElementById('cpfInputGroup').style.display = 'block';
+                        document.getElementById('userNameSelect').value = CURRENT_USER;
+                        document.getElementById('accessButton').onclick = authenticateUser;
+                        document.getElementById('cancelButton').style.display = 'none';
+                        return;
+                    }
+                    
+                    document.getElementById('authModal').style.display = 'none';
+                    document.getElementById('mainContent').style.display = 'block';
+                    document.getElementById('solicitanteInput').value = CURRENT_USER;
+                    updateUserDisplay(CURRENT_USER);
+                    setupRequestListener();
+                    return;
+                }
+            }
+            // Se não houver usuário ou o usuário for inválido, exibe o modal de login padrão
+            document.getElementById('authModal').style.display = 'flex';
+            document.getElementById('modalTitle').textContent = 'Bem-vindo(a) à Gestão de Automações';
+            document.getElementById('modalMessage').innerHTML = 'Por favor, selecione seu nome completo para começar:';
+            document.getElementById('accessButton').onclick = authenticateUser;
+            document.getElementById('cancelButton').style.display = 'none';
+        }
+
+
+        function logoutAndSwitchUser() {
+            CURRENT_USER = '';
+            IS_POWER_USER = false;
+            localStorage.removeItem('lastUser');
+            
+            document.getElementById('mainContent').style.display = 'none';
+            
+            // Resetar o modal para login/seleção
+            document.getElementById('userNameSelect').value = '';
+            document.getElementById('cpfInput').value = '';
+            document.getElementById('cpfInputGroup').style.display = 'none';
+            document.getElementById('solicitanteInput').value = ''; 
+            
+            restoreLogin(); // Volta para o processo de login
+        }
+
+        function updateUserDisplay(userName) {
+            const initial = userName.trim().toUpperCase().charAt(0);
+            document.getElementById('userNameDisplay').textContent = userName;
+            document.getElementById('userInitial').textContent = initial;
+            document.getElementById('userControl').style.display = 'flex';
+            
+            // Mostra o link para gestão de usuários apenas para Power Users
+            const userManagementLink = document.getElementById('userManagementLink');
+            userManagementLink.style.display = IS_POWER_USER ? 'block' : 'none';
+        }
+
+        function canEditRestrictedFields(user) {
+            // Verifica se o usuário logado atualmente é um Power User (Renan Martins ou ADM)
+            return IS_POWER_USER; 
+        }
+
+        function canDelete(status) {
+            const cleanStatus = status.toUpperCase().trim();
+            
+            // Power Users podem deletar qualquer item. Outros só podem deletar Backlog
+            if (IS_POWER_USER) return true; 
+
+            if (cleanStatus === 'BACKLOG') return true;
+            
+            return false;
+        }
+
+        // --- FIREBASE CRUD E LISTENER ---
+
+        function getAutomationCollectionRef() {
+            // Caminho privado por usuário (melhor para solicitações individuais)
+            return collection(db, `artifacts/${appId}/users/${USER_ID}/automation_requests`);
+        }
+
+        let unsubscribeRequests = null;
+
+        function setupRequestListener() {
+            if (!db || !USER_ID) return;
+            
+            // Se já houver um listener, desinscreve
+            if (unsubscribeRequests) {
+                unsubscribeRequests();
+            }
+
+            const requestsCollectionRef = getAutomationCollectionRef();
+            
+            // Adiciona um listener em tempo real (onSnapshot)
+            unsubscribeRequests = onSnapshot(requestsCollectionRef, (snapshot) => {
+                const requests = [];
+                snapshot.forEach(doc => {
+                    requests.push({ id: doc.id, ...doc.data() });
+                });
+                // Ordena as solicitações: Em Processo e Backlog primeiro, Finalizado por último.
+                requests.sort((a, b) => {
+                    const statusOrder = { 'Em Processo': 1, 'Backlog': 2, 'Finalizado': 3 };
+                    return statusOrder[a.status] - statusOrder[b.status];
+                });
+                
+                renderTable(requests);
+            }, (error) => {
+                console.error("Erro ao carregar solicitações:", error);
+                showModal('Erro de Sincronização', 'Não foi possível carregar a lista de solicitações. Recarregue a página.', false);
+            });
+        }
+
+        // --- FUNÇÕES DE DATA E FORMATAÇÃO ---
+
+        function formatDate(date) {
+            if (!date) return '';
+            if (date.seconds) { // Firestore Timestamp
+                return new Date(date.seconds * 1000).toLocaleDateString('pt-BR');
+            }
+            if (typeof date === 'string' && date.includes('/')) return date;
+            const d = new Date(date);
+            return d.toLocaleDateString('pt-BR');
+        }
+        
+        // --- FUNÇÕES DE RENDERIZAÇÃO ---
+        
+        function renderTable(requests) {
+            const tbody = document.getElementById('automationTableBody');
+            tbody.innerHTML = '';
+            const canEditRestricted = canEditRestrictedFields(CURRENT_USER); 
+
+            if (requests.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: #6a6a6a;">Nenhuma solicitação em andamento.</td></tr>'; 
+                return;
+            }
+
+            requests.forEach((req, index) => {
+                const tr = document.createElement('tr');
+                
+                // Título (Editável por todos)
+                tr.appendChild(createEditableCell(req.id, req.title, 'title', false));
+                // Solicitante (Editável por todos, mas formatado)
+                tr.appendChild(createEditableCell(req.id, req.solicitant || '', 'solicitant', false)); 
+                
+                // Status (Editável apenas por Power Users)
+                tr.appendChild(createStatusCell(req, req.id, canEditRestricted));
+                
+                // Frente (Editável por todos)
+                tr.appendChild(createEditableCell(req.id, req.team || '', 'team', false));
+
+                // Data Criação (Read Only - do Firestore Timestamp)
+                tr.appendChild(createReadOnlyCell(formatDate(req.date)));
+
+                // Data Conclusão (Editável apenas por Power Users)
+                const conclusionDateCell = createEditableCell(req.id, req.conclusionDate || '', 'conclusionDate', !canEditRestricted);
+                if (canEditRestricted) conclusionDateCell.className = 'editable-renan';
+                tr.appendChild(conclusionDateCell);
+                
+                // Data Atualização (Read Only)
+                tr.appendChild(createReadOnlyCell(req.updateDate || '-'));
+
+                // Link Arquivo (Editável apenas por Power Users)
+                const linkFileCell = createLinkFileCell(req, req.id, !canEditRestricted);
+                tr.appendChild(linkFileCell);
+
+                const actionsCell = document.createElement('td');
+                
+                if (canDelete(req.status)) {
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.textContent = 'Excluir';
+                    deleteBtn.className = 'action-btn delete-btn';
+                    deleteBtn.onclick = () => confirmDeleteRequest(req.id, req.title, req.status);
+                    actionsCell.appendChild(deleteBtn);
+                }
+                tr.appendChild(actionsCell);
+
+                tbody.appendChild(tr);
+            });
+        }
+
+        function createReadOnlyCell(content) {
+            const cell = document.createElement('td');
+            cell.textContent = content;
+            return cell;
+        }
+
+        function createEditableCell(docId, content, fieldName, isRestricted) {
+            const cell = document.createElement('td');
+            cell.textContent = content;
+            cell.setAttribute('contenteditable', isRestricted ? 'false' : 'true');
+            
+            if (!isRestricted) {
+                cell.onblur = (e) => {
+                    let newValue = e.target.textContent;
+                    if (fieldName === 'solicitant') {
+                        newValue = formatName(newValue); 
+                    }
+                    updateRequest(docId, fieldName, newValue);
+                }
+            }
+            
+            return cell;
+        }
+        
+        function createStatusCell(req, docId, canEdit) {
+            const statusCell = document.createElement('td');
+            const statusClass = `status-${req.status.toLowerCase().replace(' ', '-')}`;
+
+            if (canEdit) {
+                const select = document.createElement('select');
+                select.className = `status-select ${statusClass}`;
+                
+                STATUSES.forEach(status => {
+                    const option = document.createElement('option');
+                    option.value = status;
+                    option.textContent = status;
+                    if (req.status === status) {
+                        option.selected = true;
+                    }
+                    select.appendChild(option);
+                });
+
+                select.onchange = (e) => {
+                    updateRequest(docId, 'status', e.target.value);
+                    e.target.className = `status-select status-${e.target.value.toLowerCase().replace(' ', '-')}`;
+                };
+                statusCell.appendChild(select);
+
+            } else {
+                const span = document.createElement('span');
+                span.textContent = req.status;
+                span.className = `status-display ${statusClass}`; 
+                statusCell.appendChild(span);
+            }
+            
+            return statusCell;
+        }
+
+        function createLinkFileCell(req, docId, isRestricted) {
+            const cell = document.createElement('td');
+            cell.className = 'file-link-cell';
+            const canEdit = !isRestricted; 
+            const fileLink = req.fileLink ? req.fileLink.trim() : '';
+
+            // Se for Power User (Pode Editar)
+            if (canEdit) {
+                cell.className += ' editable-renan';
+                cell.setAttribute('contenteditable', 'true');
+                cell.textContent = fileLink || 'Adicionar link...';
+                
+                cell.onblur = (e) => {
+                    updateRequest(docId, 'fileLink', e.target.textContent);
+                };
+                
+            // Se NÃO for Power User (Visualização Clicável)
+            } else if (fileLink !== '') {
+                const link = document.createElement('a');
+                const fullUrl = fileLink.startsWith('http') ? fileLink : `http://${fileLink}`;
+                link.href = fullUrl;
+                link.target = '_blank';
+                link.textContent = 'Acessar Link'; 
+                link.title = fileLink;
+                
+                cell.appendChild(link);
+                cell.setAttribute('contenteditable', 'false');
+            } else {
+                // Não tem link
+                cell.textContent = '-';
+                cell.setAttribute('contenteditable', 'false');
+            }
+            
+            return cell;
+        }
+
+        // --- FUNÇÕES CRUD DO FIRESTORE ---
+
+        async function addSolicitacao() {
+            if (!db || !USER_ID) {
+                showModal('Erro', 'O Firebase não está pronto. Tente novamente.', false);
+                return;
+            }
+
+            const titleInput = document.getElementById('solicitacaoInput');
+            const messageDiv = document.getElementById('message');
+
+            const title = titleInput.value.trim();
+            const solicitant = CURRENT_USER; 
+
+            if (!title || !solicitant) {
+                messageDiv.textContent = 'Por favor, preencha o Título da Automação e garanta que seu nome está preenchido.';
+                return;
+            }
+            messageDiv.textContent = '';
+
+            try {
+                await addDoc(getAutomationCollectionRef(), {
+                    title: title,
+                    solicitant: solicitant,
+                    date: serverTimestamp(), // Usa o timestamp do servidor
+                    status: 'Backlog',
+                    team: '',
+                    conclusionDate: '',
+                    updateDate: new Date().toLocaleDateString('pt-BR'), 
+                    fileLink: ''
+                });
+
+                titleInput.value = '';
+                // A tabela será re-renderizada automaticamente pelo onSnapshot
+            } catch (error) {
+                console.error("Erro ao adicionar solicitação:", error);
+                showModal('Erro de Dados', 'Não foi possível adicionar a solicitação.', false);
+            }
+        }
+
+        async function updateRequest(docId, field, value) {
+            if (!db || !USER_ID) return;
+            
+            let updateData = {
+                [field]: value.trim()
+            };
+            
+            // Atualiza a data de atualização em qualquer alteração de campo relevante
+            if (field !== 'updateDate') {
+                 updateData.updateDate = new Date().toLocaleDateString('pt-BR');
+            }
+
+            try {
+                const docRef = doc(getAutomationCollectionRef(), docId);
+                await updateDoc(docRef, updateData);
+                // A tabela será re-renderizada automaticamente pelo onSnapshot
+            } catch (error) {
+                console.error("Erro ao atualizar solicitação:", error);
+                showModal('Erro de Dados', 'Não foi possível atualizar a solicitação.', false);
+            }
+        }
+
+        function confirmDeleteRequest(docId, title, status) {
+            if (!canDelete(status)) {
+                showModal('Permissão Negada', 'A exclusão de tarefas "Em Processo" ou "Finalizadas" é restrita a usuários autorizados (Renan Martins ou ADM).', false);
+                return;
+            }
+            
+            showModal('Confirmar Exclusão', 
+                `Tem certeza que deseja excluir a solicitação <strong>"${title}"</strong>?`, 
+                true, 
+                (result) => {
+                    if (result) {
+                        deleteRequest(docId);
+                    }
+                }
+            );
+        }
+        
+        async function deleteRequest(docId) {
+            if (!db || !USER_ID) return;
+            
+            try {
+                await deleteDoc(doc(getAutomationCollectionRef(), docId));
+                // A tabela será re-renderizada automaticamente pelo onSnapshot
+            } catch (error) {
+                console.error("Erro ao excluir solicitação:", error);
+                showModal('Erro de Dados', 'Não foi possível excluir a solicitação.', false);
+            }
+        }
+        
+        // Função para abrir a nova página de gestão de usuários
+        function openUserManagement() {
+            if (IS_POWER_USER) {
+                 // Redireciona para o arquivo de gestão de usuários
+                 window.location.href = 'gestao_usuarios.html';
+            } else {
+                 showModal('Permissão Negada', 'A gestão de usuários é restrita a Renan Martins e ADM.', false);
+            }
+        }
+
+
+        window.onload = () => {
+            // Inicializa o Firebase
+            initializeFirebase();
+            // Configura o listener de autenticação para iniciar o resto
+            setupAuthListener();
+            
+            // Atribui eventos aos botões e inputs
+            document.getElementById('userNameSelect').onchange = (e) => checkIfPowerUser(e.target.value);
+            document.getElementById('accessButton').onclick = authenticateUser;
+            document.getElementById('logoutButton').onclick = logoutAndSwitchUser;
+            document.getElementById('userManagementLink').onclick = openUserManagement;
+            
+            // Prepara o modal para ser usado como painel de controle
+            document.getElementById('modalTitle').textContent = 'Bem-vindo(a) à Gestão de Automações';
+            document.getElementById('modalMessage').innerHTML = 'Por favor, selecione seu nome completo para começar:';
+            document.getElementById('cancelButton').style.display = 'none'; // Esconde o cancelar no login inicial
+            
+            // Atribuir a função addSolicitacao para ser acessível globalmente
+            window.addSolicitacao = addSolicitacao;
+        };
+        
+    </script>
 </body>
 </html>
