@@ -1,677 +1,18 @@
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, getDocs, orderBy, limit, serverTimestamp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-    // Variáveis Globais do Canvas (MANDATÓRIO USAR)
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-    const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
-    // Configurações e Inicialização do Firebase
-    let app, db, auth;
-    let CURRENT_USER = '';
-    let USER_LIST = [];
-    let IS_POWER_USER = false;
-    let USER_ID = null; // ID do Firebase, usado para o caminho do Firestore
-
-    // Senha de acesso para Renan Martins e ADM
-    const AUTHORIZED_PASSWORD = 'salmos93';
-    const STATUSES = ['Backlog', 'Em Processo', 'Finalizado'];
-    const DEFAULT_USERS = ['Vinicius', 'Diego', 'Matheus', 'Renato', 'Lucas', 'Nedson', 'Renan Martins', 'ADM'];
-
-    function formatName(name) {
-        if (!name) return '';
-        let cleanedName = name.trim().toLowerCase();
-        return cleanedName.split(' ').map(word => {
-            if (word.length === 0) return '';
-            return word.charAt(0).toUpperCase() + word.slice(1);
-        }).join(' ');
-    }
-    
-    // --- LÓGICA DE MODAL (Substitui alert/confirm) ---
-    function showModal(title, message, isConfirm, callback) {
-        const modal = document.getElementById('authModal');
-        const modalTitle = document.getElementById('modalTitle');
-        const modalMessage = document.getElementById('modalMessage');
-        const passwordGroup = document.getElementById('cpfInputGroup');
-        const passwordInput = document.getElementById('cpfInput');
-        const accessButton = document.getElementById('accessButton');
-        const cancelButton = document.getElementById('cancelButton');
-        const userNameSelect = document.getElementById('userNameSelect');
-
-        modalTitle.textContent = title;
-        modalMessage.innerHTML = message;
-        passwordInput.value = '';
-        
-        // Esconde o campo de senha
-        passwordGroup.style.display = 'none';
-
-        // Mostra o select APENAS se for um modal de login
-        if (title.includes('Bem-vindo') || title.includes('Reautenticação')) {
-            userNameSelect.style.display = 'block';
-        } else {
-            userNameSelect.style.display = 'none';
-        }
-
-        if (isConfirm) {
-            accessButton.textContent = 'Confirmar';
-            accessButton.style.width = 'calc(50% - 5px)';
-            accessButton.onclick = () => {
-                modal.style.display = 'none';
-                if (callback) callback(true);
-            };
-            cancelButton.style.display = 'inline-block';
-            cancelButton.onclick = () => {
-                modal.style.display = 'none';
-                if (callback) callback(false);
-            };
-        } else {
-            accessButton.textContent = 'OK';
-            accessButton.style.width = '100%'; // Botão OK ocupa espaço total
-            accessButton.onclick = () => {
-                modal.style.display = 'none';
-                if (callback) callback();
-            };
-            cancelButton.style.display = 'none';
-        }
-        modal.style.display = 'flex';
-    }
-
-    // --- FUNÇÕES DE SETUP E AUTENTICAÇÃO ---
-
-    async function initializeFirebase() {
-        try {
-            // setLogLevel('debug'); // Usar para debug
-            if (!firebaseConfig || Object.keys(firebaseConfig).length === 0) {
-                 throw new Error("Configuração do Firebase não encontrada.");
-            }
-            app = initializeApp(firebaseConfig);
-            db = getFirestore(app);
-            auth = getAuth(app);
-
-            // Tenta logar com o token de sessão ou anonimamente
-            if (initialAuthToken) {
-                await signInWithCustomToken(auth, initialAuthToken);
-            } else {
-                await signInAnonymously(auth);
-            }
-        } catch (error) {
-            console.error("Erro na inicialização ou autenticação do Firebase:", error);
-            showModal('Erro Crítico', `Falha ao conectar ao servidor. Verifique se o app está no ambiente correto.<br><small>(${error.message})</small>`, false);
-        }
-    }
-
-    function setupAuthListener() {
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                USER_ID = user.uid;
-                await loadUserList(); // Busca usuários
-                // restoreLogin() será chamado de dentro do loadUserList (via renderUserDropdown)
-            } else {
-                // Caso não haja usuário autenticado, exibe o modal de login
-                showModal('Bem-vindo(a) à Gestão de Automações', 'Por favor, selecione seu nome completo para começar:', false, authenticateUser);
-            }
-        });
-    }
-
-    async function loadUserList() {
-        // A coleção de usuários agora é a mesma usada em `gestao_usuarios.html`
-        const usersCollectionRef = collection(db, `artifacts/${appId}/public/data/app_users`);
-        
-        try {
-            // Inicialização de usuários padrão se a coleção estiver vazia
-            const snapshot = await getDocs(usersCollectionRef);
-            if (snapshot.empty) {
-                console.log("Inicializando lista de usuários padrão...");
-                for (const name of DEFAULT_USERS) {
-                    const isPowerUser = name === 'Renan Martins' || name === 'ADM';
-                    
-                    // Cria o ID do documento baseado no nome (igual ao gestao_usuarios.html)
-                    const docId = name.toUpperCase().replace(/\s/g, '_');
-
-                    await setDoc(doc(usersCollectionRef, docId), {
-                        name: formatName(name),
-                        isPowerUser: isPowerUser
-                    });
-                }
-            }
-        } catch(err) {
-            console.error("Erro ao inicializar usuários: ", err);
-            showModal('Erro de Inicialização', 'Não foi possível carregar a lista de usuários padrão.', false);
-        }
-
-
-        // Snapshot Listener para a lista de usuários
-        onSnapshot(usersCollectionRef, (snapshot) => {
-            USER_LIST = [];
-            snapshot.forEach(doc => {
-                USER_LIST.push(doc.data());
-            });
-            renderUserDropdown(USER_LIST); // <--- RENDERIZA OS NOMES
-            restoreLogin(); // <--- TENTA RESTAURAR O LOGIN DEPOIS QUE OS NOMES EXISTEM
-        }, (error) => {
-            console.error("Erro ao carregar lista de usuários:", error);
-            showModal('Erro de Sincronização', 'Não foi possível carregar a lista de usuários. Recarregue a página.', false);
-        });
-    }
-
-    function renderUserDropdown(users) {
-        const select = document.getElementById('userNameSelect');
-        const lastUser = localStorage.getItem('lastUser');
-        
-        select.innerHTML = '<option value="" disabled>Selecione seu nome</option>';
-        
-        // Garante que a lista de usuários está em ordem alfabética para melhor UX
-        const sortedUsers = [...users].sort((a, b) => a.name.localeCompare(b.name));
-
-        sortedUsers.forEach(user => {
-            const option = document.createElement('option');
-            option.value = user.name;
-            option.textContent = user.name;
-            if (user.name === lastUser) {
-                option.selected = true;
-            }
-            select.appendChild(option);
-        });
-
-        // Se o lastUser não foi encontrado, força o "Selecione seu nome"
-        if (!lastUser || !users.find(u => u.name === lastUser)) {
-             select.selectedIndex = 0;
-        }
-        
-        // Dispara a checagem se o último usuário selecionado é um Power User
-        if (lastUser) {
-            checkIfPowerUser(lastUser);
-        }
-    }
-
-    function checkIfPowerUser(selectedName) {
-        const user = USER_LIST.find(u => u.name === selectedName);
-        const isPower = user && user.isPowerUser;
-        const cpfGroup = document.getElementById('cpfInputGroup');
-        
-        if (isPower) {
-            cpfGroup.style.display = 'block';
-        } else {
-            cpfGroup.style.display = 'none';
-            document.getElementById('cpfInput').value = ''; 
-        }
-        return isPower;
-    }
-
-    function authenticateUser() {
-        const userNameSelect = document.getElementById('userNameSelect');
-        const selectedName = userNameSelect.value.trim();
-        const passwordInput = document.getElementById('cpfInput').value.trim();
-        const user = USER_LIST.find(u => u.name === selectedName);
-
-        if (!selectedName) {
-            showModal('Acesso Negado', 'Por favor, selecione seu nome para continuar.', false);
-            // Re-exibe o modal de login se fechar o de erro
-            restoreLogin();
-            return;
-        }
-
-        const requiresPassword = user && user.isPowerUser;
-
-        if (requiresPassword) {
-            if (passwordInput.toLowerCase() !== AUTHORIZED_PASSWORD) {
-                showModal('Acesso Negado', 'Senha incorreta.', false, restoreLogin);
-                return;
-            }
-        }
-
-        CURRENT_USER = selectedName;
-        IS_POWER_USER = requiresPassword; // Define permissão baseada na senha
-        localStorage.setItem('lastUser', CURRENT_USER);
-
-        document.getElementById('authModal').style.display = 'none';
-        document.getElementById('mainContent').style.display = 'block';
-
-        document.getElementById('solicitanteInput').value = CURRENT_USER;
-        updateUserDisplay(CURRENT_USER);
-        
-        setupRequestListener(); // Inicia a escuta de solicitações
-    }
-    
-    function restoreLogin() {
-        // Se já estiver logado (CURRENT_USER definido), não faz nada
-        if(CURRENT_USER) {
-            return;
-        }
-
-        const lastUser = localStorage.getItem('lastUser');
-        if (lastUser) {
-            // Tenta simular o login para um usuário existente
-            const user = USER_LIST.find(u => u.name === lastUser);
-            if (user) {
-                CURRENT_USER = user.name;
-                IS_POWER_USER = user.isPowerUser;
-                
-                // Se for power user, forçamos a reautenticação (para inserir senha)
-                if (IS_POWER_USER) {
-                    showModal('Reautenticação Necessária', `Seu usuário (${CURRENT_USER}) requer a senha para acesso completo.`, false, authenticateUser);
-                    document.getElementById('userNameSelect').value = CURRENT_USER;
-                    document.getElementById('cpfInputGroup').style.display = 'block';
-                    return;
-                }
-                
-                // Login automático se não for power user
-                document.getElementById('authModal').style.display = 'none';
-                document.getElementById('mainContent').style.display = 'block';
-                document.getElementById('solicitanteInput').value = CURRENT_USER;
-                updateUserDisplay(CURRENT_USER);
-                setupRequestListener();
-                return;
-            }
-        }
-
-        // Se não houver usuário ou o usuário for inválido, exibe o modal de login padrão
-        showModal('Bem-vindo(a) à Gestão de Automações', 'Por favor, selecione seu nome completo para começar:', false, authenticateUser);
-    }
-
-
-    function logoutAndSwitchUser() {
-        CURRENT_USER = '';
-        IS_POWER_USER = false;
-        localStorage.removeItem('lastUser');
-        
-        document.getElementById('mainContent').style.display = 'none';
-        
-        // Resetar o modal para login/seleção
-        document.getElementById('userNameSelect').value = '';
-        document.getElementById('cpfInput').value = '';
-        document.getElementById('cpfInputGroup').style.display = 'none';
-        document.getElementById('solicitanteInput').value = ''; 
-        
-        restoreLogin(); // Volta para o processo de login
-    }
-
-    function updateUserDisplay(userName) {
-        const initial = userName.trim().toUpperCase().charAt(0);
-        document.getElementById('userNameDisplay').textContent = userName;
-        document.getElementById('userInitial').textContent = initial;
-        document.getElementById('userControl').style.display = 'flex';
-        
-        // Mostra o link para gestão de usuários apenas para Power Users
-        const userManagementLink = document.getElementById('userManagementLink');
-        userManagementLink.style.display = IS_POWER_USER ? 'block' : 'none';
-    }
-
-    function canEditRestrictedFields(user) {
-        // Verifica se o usuário logado atualmente é um Power User (Renan Martins ou ADM)
-        return IS_POWER_USER; 
-    }
-
-    function canDelete(status) {
-        const cleanStatus = status.toUpperCase().trim();
-        
-        // Power Users podem deletar qualquer item. Outros só podem deletar Backlog
-        if (IS_POWER_USER) return true; 
-
-        if (cleanStatus === 'BACKLOG') return true;
-        
-        return false;
-    }
-
-    // --- FIREBASE CRUD E LISTENER ---
-
-    // CORREÇÃO: MUDANÇA PARA O CAMINHO PÚBLICO/COMPARTILHADO
-    function getAutomationCollectionRef() {
-        // Caminho público para que todos (Renan, Diego, etc.) vejam as mesmas solicitações
-        return collection(db, `artifacts/${appId}/public/data/automation_requests`);
-    }
-
-    let unsubscribeRequests = null;
-
-    function setupRequestListener() {
-        if (!db || !USER_ID) return;
-        
-        // Se já houver um listener, desinscreve
-        if (unsubscribeRequests) {
-            unsubscribeRequests();
-        }
-
-        const requestsCollectionRef = getAutomationCollectionRef();
-        
-        // Adiciona um listener em tempo real (onSnapshot)
-        unsubscribeRequests = onSnapshot(requestsCollectionRef, (snapshot) => {
-            const requests = [];
-            snapshot.forEach(doc => {
-                requests.push({ id: doc.id, ...doc.data() });
-            });
-            // Ordena as solicitações: Em Processo e Backlog primeiro, Finalizado por último.
-            requests.sort((a, b) => {
-                const statusOrder = { 'Em Processo': 1, 'Backlog': 2, 'Finalizado': 3 };
-                const statusA = statusOrder[a.status] || 99;
-                const statusB = statusOrder[b.status] || 99;
-                return statusA - statusB;
-            });
-            
-            renderTable(requests);
-        }, (error) => {
-            console.error("Erro ao carregar solicitações:", error);
-            showModal('Erro de Sincronização', 'Não foi possível carregar a lista de solicitações. Recarregue a página.', false);
-        });
-    }
-
-    // --- FUNÇÕES DE DATA E FORMATAÇÃO ---
-
-    function formatDate(date) {
-        if (!date) return '';
-        if (date.seconds) { // Firestore Timestamp
-            return new Date(date.seconds * 1000).toLocaleDateString('pt-BR');
-        }
-        if (typeof date === 'string' && date.includes('/')) return date; // Já formatado
-        
-        const d = new Date(date); // Tenta formatar string ISO
-        if (isNaN(d.getTime())) return '-'; // Data inválida
-        return d.toLocaleDateString('pt-BR');
-    }
-    
-    // --- FUNÇÕES DE RENDERIZAÇÃO ---
-    
-    function renderTable(requests) {
-        const tbody = document.getElementById('automationTableBody');
-        tbody.innerHTML = '';
-        const canEditRestricted = canEditRestrictedFields(CURRENT_USER); 
-
-        if (requests.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: #6a6a6a;">Nenhuma solicitação em andamento.</td></tr>'; 
-            return;
-        }
-
-        requests.forEach((req) => {
-            const tr = document.createElement('tr');
-            
-            // Título (Editável por todos)
-            tr.appendChild(createEditableCell(req.id, req.title, 'title', false));
-            // Solicitante (Editável por todos, mas formatado)
-            tr.appendChild(createEditableCell(req.id, req.solicitant || '', 'solicitant', false)); 
-            
-            // Status (Editável apenas por Power Users)
-            tr.appendChild(createStatusCell(req, req.id, canEditRestricted));
-            
-            // Frente (Editável por todos)
-            tr.appendChild(createEditableCell(req.id, req.team || '', 'team', false));
-
-            // Data Criação (Read Only - do Firestore Timestamp)
-            tr.appendChild(createReadOnlyCell(formatDate(req.date)));
-
-            // Data Conclusão (Editável apenas por Power Users)
-            const conclusionDateCell = createEditableCell(req.id, req.conclusionDate || '', 'conclusionDate', !canEditRestricted);
-            if (canEditRestricted) conclusionDateCell.className = 'editable-renan';
-            tr.appendChild(conclusionDateCell);
-            
-            // Data Atualização (Read Only)
-            tr.appendChild(createReadOnlyCell(req.updateDate || '-'));
-
-            // Link Arquivo (Editável apenas por Power Users)
-            const linkFileCell = createLinkFileCell(req, req.id, !canEditRestricted);
-            tr.appendChild(linkFileCell);
-
-            const actionsCell = document.createElement('td');
-            
-            if (canDelete(req.status)) {
-                const deleteBtn = document.createElement('button');
-                deleteBtn.textContent = 'Excluir';
-                deleteBtn.className = 'action-btn delete-btn';
-                deleteBtn.onclick = () => confirmDeleteRequest(req.id, req.title, req.status);
-                actionsCell.appendChild(deleteBtn);
-            }
-            tr.appendChild(actionsCell);
-
-            tbody.appendChild(tr);
-        });
-    }
-
-    function createReadOnlyCell(content) {
-        const cell = document.createElement('td');
-        cell.textContent = content;
-        return cell;
-    }
-
-    function createEditableCell(docId, content, fieldName, isRestricted) {
-        const cell = document.createElement('td');
-        cell.textContent = content;
-        cell.setAttribute('contenteditable', isRestricted ? 'false' : 'true');
-        
-        if (!isRestricted) {
-            cell.onblur = (e) => {
-                let newValue = e.target.textContent;
-                if (fieldName === 'solicitant') {
-                    newValue = formatName(newValue); 
-                }
-                updateRequest(docId, fieldName, newValue);
-            }
-        }
-        
-        return cell;
-    }
-    
-    function createStatusCell(req, docId, canEdit) {
-        const statusCell = document.createElement('td');
-        const status = req.status || 'Backlog'; // Garante um status padrão
-        const statusClass = `status-${status.toLowerCase().replace(' ', '-')}`;
-
-        if (canEdit) {
-            const select = document.createElement('select');
-            select.className = `status-select ${statusClass}`;
-            
-            STATUSES.forEach(statusOpt => {
-                const option = document.createElement('option');
-                option.value = statusOpt;
-                option.textContent = statusOpt;
-                if (status === statusOpt) {
-                    option.selected = true;
-                }
-                select.appendChild(option);
-            });
-
-            select.onchange = (e) => {
-                updateRequest(docId, 'status', e.target.value);
-                e.target.className = `status-select status-${e.target.value.toLowerCase().replace(' ', '-')}`;
-            };
-            statusCell.appendChild(select);
-
-        } else {
-            const span = document.createElement('span');
-            span.textContent = status;
-            span.className = `status-display ${statusClass}`; 
-            statusCell.appendChild(span);
-        }
-        
-        return statusCell;
-    }
-
-    function createLinkFileCell(req, docId, isRestricted) {
-        const cell = document.createElement('td');
-        cell.className = 'file-link-cell';
-        const canEdit = !isRestricted; 
-        const fileLink = req.fileLink ? req.fileLink.trim() : '';
-
-        // Se for Power User (Pode Editar)
-        if (canEdit) {
-            cell.className += ' editable-renan';
-            cell.setAttribute('contenteditable', 'true');
-            cell.textContent = fileLink || 'Adicionar link...';
-            
-            cell.onfocus = (e) => {
-                if (e.target.textContent === 'Adicionar link...') {
-                    e.target.textContent = '';
-                }
-            };
-            
-            cell.onblur = (e) => {
-                let newText = e.target.textContent.trim();
-                if (newText === '') {
-                    e.target.textContent = 'Adicionar link...';
-                    updateRequest(docId, 'fileLink', '');
-                } else if (newText !== fileLink) {
-                    updateRequest(docId, 'fileLink', newText);
-                }
-            };
-            
-        // Se NÃO for Power User (Visualização Clicável)
-        } else if (fileLink !== '') {
-            const link = document.createElement('a');
-            const fullUrl = fileLink.startsWith('http') ? fileLink : `http://${fileLink}`;
-            link.href = fullUrl;
-            link.target = '_blank';
-            link.textContent = 'Acessar Link'; 
-            link.title = fileLink;
-            
-            cell.appendChild(link);
-            cell.setAttribute('contenteditable', 'false');
-        } else {
-            // Não tem link
-            cell.textContent = '-';
-            cell.setAttribute('contenteditable', 'false');
-        }
-        
-        return cell;
-    }
-
-    // --- FUNÇÕES CRUD DO FIRESTORE ---
-
-    async function addSolicitacao() {
-        if (!db || !USER_ID) {
-            showModal('Erro', 'O Firebase não está pronto. Tente novamente.', false);
-            return;
-        }
-
-        const titleInput = document.getElementById('solicitacaoInput');
-        const messageDiv = document.getElementById('message');
-
-        const title = titleInput.value.trim();
-        const solicitant = CURRENT_USER; 
-
-        if (!title || !solicitant) {
-            messageDiv.textContent = 'Por favor, preencha o Título da Automação e garanta que seu nome está preenchido.';
-            return;
-        }
-        messageDiv.textContent = '';
-
-        try {
-            await addDoc(getAutomationCollectionRef(), {
-                title: title,
-                solicitant: solicitant,
-                date: serverTimestamp(), // Usa o timestamp do servidor
-                status: 'Backlog',
-                team: '',
-                conclusionDate: '',
-                updateDate: new Date().toLocaleDateString('pt-BR'), 
-                fileLink: ''
-            });
-
-            titleInput.value = '';
-            // A tabela será re-renderizada automaticamente pelo onSnapshot
-        } catch (error) {
-            console.error("Erro ao adicionar solicitação:", error);
-            showModal('Erro de Dados', 'Não foi possível adicionar a solicitação.', false);
-        }
-    }
-    // Expondo a função globalmente para o onclick do HTML
-    window.addSolicitacao = addSolicitacao;
-
-
-    async function updateRequest(docId, field, value) {
-        if (!db || !USER_ID) return;
-        
-        let updateData = {
-            [field]: value.trim()
-        };
-        
-        // Atualiza a data de atualização em qualquer alteração de campo relevante
-        if (field !== 'updateDate') {
-             updateData.updateDate = new Date().toLocaleDateString('pt-BR');
-        }
-
-        try {
-            const docRef = doc(getAutomationCollectionRef(), docId);
-            await updateDoc(docRef, updateData);
-            // A tabela será re-renderizada automaticamente pelo onSnapshot
-        } catch (error) {
-            console.error("Erro ao atualizar solicitação:", error);
-            showModal('Erro de Dados', 'Não foi possível atualizar a solicitação.', false);
-        }
-    }
-
-    function confirmDeleteRequest(docId, title, status) {
-        if (!canDelete(status)) {
-            showModal('Permissão Negada', 'A exclusão de tarefas "Em Processo" ou "Finalizadas" é restrita a usuários autorizados (Renan Martins ou ADM).', false);
-            return;
-        }
-        
-        showModal('Confirmar Exclusão', 
-            `Tem certeza que deseja excluir a solicitação <strong>"${title}"</strong>?`, 
-            true, 
-            (result) => {
-                if (result) {
-                    deleteRequest(docId);
-                }
-            }
-        );
-    }
-    
-    async function deleteRequest(docId) {
-        if (!db || !USER_ID) return;
-        
-        try {
-            await deleteDoc(doc(getAutomationCollectionRef(), docId));
-            // A tabela será re-renderizada automaticamente pelo onSnapshot
-        } catch (error) {
-            console.error("Erro ao excluir solicitação:", error);
-            showModal('Erro de Dados', 'Não foi possível excluir a solicitação.', false);
-        }
-    }
-    
-    // Função para abrir a nova página de gestão de usuários
-    function openUserManagement(event) {
-        event.preventDefault(); // Impede o link de navegar para '#'
-        if (IS_POWER_USER) {
-             // Redireciona para o arquivo de gestão de usuários
-            window.location.href = 'gestao_usuarios.html';
-        } else {
-             showModal('Permissão Negada', 'A gestão de usuários é restrita a Renan Martins e ADM.', false);
-        }
-    }
-    // Expondo a função globalmente
-    window.openUserManagement = openUserManagement;
-
-
-    window.onload = () => {
-        // Inicializa o Firebase
-        initializeFirebase();
-        // Configura o listener de autenticação para iniciar o resto
-        setupAuthListener();
-        
-        // Atribui eventos aos botões e inputs
-        document.getElementById('userNameSelect').onchange = (e) => checkIfPowerUser(e.target.value);
-        document.getElementById('accessButton').onclick = authenticateUser;
-        document.getElementById('logoutButton').onclick = logoutAndSwitchUser;
-        document.getElementById('userManagementLink').onclick = openUserManagement;
-    };
-    
-</script>
-
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Automatização - Gestão de Solicitações</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        /* Estilos Base (Regra 2) */
+        /* Estilos Base */
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             padding: 30px; 
             background-color: #e9eef2;
-            margin: 0;
         }
         .container { 
-            max-width: 1300px; /* Mantido do código original */
+            max-width: 1300px;
             margin: 0 auto; 
             background-color: white; 
             padding: 40px; 
@@ -684,12 +25,12 @@
         h2 { color: #6a6a6a; font-size: 1.2em; font-weight: 300; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; margin-top: 0; margin-bottom: 30px; text-align: center; }
         .tool-section { min-height: 200px; padding: 10px; }
 
-        /* User Control */
+        /* User Control (Clique em toda a área) */
         #userControl {
             position: absolute;
             top: 20px;
             right: 20px;
-            display: none; /* Inicia oculto */
+            display: flex;
             align-items: center;
             background-color: #f0f0f0;
             padding: 8px 15px;
@@ -699,23 +40,26 @@
             font-size: 0.9em;
             font-weight: 600;
             color: #333;
-            flex-direction: column;
-            align-items: flex-end;
-            z-index: 10;
         }
-        #userControl:hover { background-color: #e0e0e0; }
-        .user-info { display: flex; align-items: center; cursor: pointer; }
+        #userControl:hover {
+            background-color: #e0e0e0;
+        }
+        .user-info {
+             display: flex;
+             align-items: center;
+        }
         .user-icon {
-            width: 30px; height: 30px; background-color: #0070d2; color: white; border-radius: 50%;
-            display: flex; justify-content: center; align-items: center; font-size: 1em; margin-left: 10px;
+            width: 30px;
+            height: 30px;
+            background-color: #0070d2;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1em;
+            margin-right: 10px;
         }
-        .user-options { margin-top: 5px; }
-        .user-options button, .user-options a {
-            background: none; border: none; color: #0070d2; text-decoration: none;
-            padding: 2px 0; margin: 0 5px; cursor: pointer; font-size: 0.8em;
-            display: block; text-align: right;
-        }
-        .user-options a:hover, .user-options button:hover { text-decoration: underline; }
 
         /* Formulário de Input */
         .input-form {
@@ -729,40 +73,101 @@
             background-color: #f5f5f5;
         }
         .input-form input[type="text"] {
-            padding: 10px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: 100%;
+            box-sizing: border-box;
         }
         .input-form button {
-            padding: 10px; background-color: #0070d2; color: white; border: none; border-radius: 4px; 
-            cursor: pointer; transition: background-color 0.2s;
-            align-self: end; /* Alinha o botão ao final do grid cell */
+            padding: 10px;
+            background-color: #0070d2;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
         }
         .input-form button:hover { background-color: #005aa3; }
 
         /* Tabela */
-        #automationTable { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.9em; }
-        #automationTable th, #automationTable td { padding: 10px 8px; text-align: left; border-bottom: 1px solid #e0e0e0; vertical-align: middle; } 
-        #automationTable th { background-color: #0070d2; color: white; font-weight: 600; font-size: 1em; }
+        #automationTable { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-top: 20px; 
+            font-size: 0.9em; 
+            table-layout: fixed; 
+        }
+        #automationTable th, #automationTable td { 
+            padding: 10px 8px; 
+            text-align: left; 
+            border-bottom: 1px solid #e0e0e0; 
+            word-wrap: break-word; 
+        } 
+        #automationTable th { 
+            background-color: #0070d2; 
+            color: white; 
+            font-weight: 600; 
+            font-size: 1em; 
+        }
         #automationTable tr:nth-child(even) { background-color: #f9f9f9; }
         
+        #automationTable th:nth-child(1), #automationTable td:nth-child(1) { width: 25%; } 
+        #automationTable th:nth-child(2), #automationTable td:nth-child(2) { width: 15%; } 
+        #automationTable th:nth-child(3), #automationTable td:nth-child(3) { width: 12%; } 
+        #automationTable th:nth-child(4), #automationTable td:nth-child(4) { width: 10%; } 
+        #automationTable th:nth-child(5), #automationTable td:nth-child(5) { width: 10%; } 
+        #automationTable th:nth-child(6), #automationTable td:nth-child(6) { width: 10%; } 
+        #automationTable th:nth-child(7), #automationTable td:nth-child(7) { width: 10%; } 
+        #automationTable th:nth-child(8), #automationTable td:nth-child(8) { width: 15%; } 
+        #automationTable th:nth-child(9), #automationTable td:nth-child(9) { width: 8%; } 
+
+
         /* Campos Editáveis */
-        [contenteditable="true"]:focus { outline: 2px solid #0070d2; background-color: #e6f7ff; }
-        .editable-renan { background-color: #f0faff; border: 1px solid #0070d2; }
-        .editable-renan[contenteditable="false"] { background-color: transparent; border: none; }
+        [contenteditable="true"]:focus {
+            outline: 2px solid #0070d2;
+            background-color: #e6f7ff;
+        }
         
         /* --- ESTILOS DE STATUS --- */
         .status-select, .status-display { 
-            padding: 6px; border-radius: 4px; border: 1px solid #ccc; font-size: 0.9em; font-weight: bold;
-            -webkit-appearance: none; -moz-appearance: none; appearance: none; cursor: default;
-            display: inline-block; box-sizing: border-box;
+            padding: 6px; 
+            border-radius: 4px; 
+            border: 1px solid #ccc; 
+            font-size: 0.9em; 
+            font-weight: bold;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            cursor: default;
+            display: inline-block;
+            box-sizing: border-box;
             width: 100%;
         }
-        .status-select { cursor: pointer; }
-        .status-display { border: none !important; }
+        .status-select { 
+            cursor: pointer; 
+            width: 90%; 
+        }
+        .status-display { 
+            border: none !important; 
+        }
         
         /* Cores */
-        .status-backlog { background-color: #f5f5f5 !important; color: #616161; border-color: #616161 !important; }
-        .status-em-processo { background-color: #fff8e1 !important; color: #ffa000; border-color: #ffa000 !important; }
-        .status-finalizado { background-color: #E8F5E9 !important; color: #2E7D32; border-color: #2E7D32 !important; }
+        .status-backlog { 
+            background-color: #f5f5f5 !important; 
+            color: #616161; 
+            border-color: #616161 !important;
+        }
+        .status-em-processo { 
+            background-color: #fff8e1 !important; 
+            color: #ffa000; 
+            border-color: #ffa000 !important;
+        }
+        .status-finalizado { 
+            background-color: #E8F5E9 !important; 
+            color: #2E7D32; 
+            border-color: #2E7D32 !important; 
+        }
 
         /* Botões de Ação */
         .action-btn { background: none; border: none; cursor: pointer; padding: 4px 6px; margin-right: 5px; font-size: 1em; color: #0070d2; transition: color 0.2s; }
@@ -770,114 +175,111 @@
         .delete-btn:hover { color: #a32e22; }
 
         /* Estilo para links */
-        .file-link-cell { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
-        .file-link-cell a { color: #0070d2; text-decoration: none; font-weight: bold; }
-        .file-link-cell a:hover { text-decoration: underline; }
+        .file-link-cell { 
+            white-space: nowrap; 
+            overflow: hidden; 
+            text-overflow: ellipsis; 
+            max-width: 150px; 
+        }
+        .file-link-cell a {
+            color: #0070d2;
+            text-decoration: none;
+            font-weight: bold; 
+        }
+        .file-link-cell a:hover {
+            text-decoration: underline;
+        }
 
-        /* Modal de Autenticação/Mensagem (Atualizado para ser um modal genérico) */
+        /* Modal de Autenticação */
         #authModal {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(0, 0, 0, 0.6); display: none; justify-content: center; align-items: center; z-index: 1000;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
         }
         .modal-content {
-            background: white; padding: 30px; border-radius: 8px; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); 
-            text-align: center; max-width: 400px; width: 90%;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            min-width: 300px;
         }
+        /* CORREÇÃO: Estilo para o <select> e <input> */
         .modal-content select, .modal-content input, .modal-content button {
-            margin-top: 15px; padding: 10px; width: 100%; box-sizing: border-box; border-radius: 4px;
+            margin-top: 15px;
+            padding: 10px;
+            width: 100%;
+            box-sizing: border-box;
+            border-radius: 4px;
+        }
+        .modal-content select {
+             border: 1px solid #ccc;
+             background-color: white;
+             -webkit-appearance: menulist;
+             -moz-appearance: menulist;
+             appearance: menulist;
+             cursor: pointer;
+        }
+        .modal-content input {
+            border: 1px solid #ccc;
         }
         .modal-content button {
-            background-color: #0070d2; color: white; border: none; cursor: pointer;
+            background-color: #0070d2;
+            color: white;
+            border: none;
+            cursor: pointer;
         }
-        #cancelButton {
-            background-color: #6a6a6a; margin-left: 5px; width: calc(50% - 5px);
-        }
-        #accessButton {
-            width: calc(50% - 5px); display: inline-block;
-        }
-        #cpfInputGroup { display: none; }
         #mainContent { display: none; }
         
-        /* Estilos específicos do novo dropdown */
-        #userNameSelect {
-             border: 1px solid #ccc;
-             padding: 10px;
-             background-color: white;
-             appearance: none; /* remove padrão */
-             -webkit-appearance: none;
-             -moz-appearance: none;
-             background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path fill="%23333" d="M8 12l-6-6h12z"/></svg>');
-             background-repeat: no-repeat;
-             background-position: right 10px top 50%;
-             padding-right: 30px;
+        .editable-renan {
+            background-color: #f0faff; 
+            border: 1px solid #0070d2;
+        }
+        .editable-renan[contenteditable="false"] {
+            background-color: transparent;
+            border: none;
         }
         
-        /* Media query para responsividade */
-        @media (max-width: 768px) {
-            body { padding: 10px; }
-            .container { padding: 20px; }
-            .input-form { grid-template-columns: 1fr; }
-            .input-form button { margin-top: 10px; }
-            #userControl { 
-                position: relative; 
-                top: -10px; 
-                right: 0; 
-                width: 100%; 
-                margin-bottom: 15px; 
-                flex-direction: row; 
-                justify-content: space-between;
-                padding: 5px 10px;
-            }
-            .user-options { margin-top: 0; display: flex; align-items: center; }
-            h1 { font-size: 1.8em; }
-            h2 { font-size: 1.1em; }
-
-            /* Tabela responsiva */
-            #automationTable { display: block; overflow-x: auto; white-space: nowrap; }
-            #automationTable th, #automationTable td { min-width: 120px; } /* Largura mínima para colunas */
-            #automationTable th:first-child, #automationTable td:first-child { min-width: 180px; } /* Título */
+        #cpfInputGroup {
+            display: none;
         }
 
     </style>
 </head>
 <body>
 
-    <!-- Modal de Autenticação e Mensagens Customizadas -->
     <div id="authModal">
         <div class="modal-content">
-            <h3 id="modalTitle">Bem-vindo(a) à Gestão de Automações</h3>
-            <p id="modalMessage">Por favor, selecione seu nome completo para começar:</p>
+            <h3>Bem-vindo(a) à Gestão de Automações</h3>
+            <p>Por favor, **selecione** seu nome completo para começar:</p>
             
-            <!-- O Select é preenchido pelo JavaScript (renderUserDropdown) -->
-            <select id="userNameSelect" required>
-                <option value="" disabled selected>Carregando nomes...</option>
+            <!-- CORREÇÃO: <select> ao invés de <input> -->
+            <select id="userNameSelect">
+                <!-- As opções serão preenchidas pelo JavaScript -->
             </select>
             
             <div id="cpfInputGroup">
-                <input type="password" id="cpfInput" placeholder="Digite a Senha de Acesso (Renan/ADM)" required> 
+                <input type="password" id="cpfInput" placeholder="Digite a Senha de Acesso" required> 
             </div>
             
-            <div>
-                <!-- Botões do Modal. O 'accessButton' é usado para Login ou 'OK' -->
-                <button id="accessButton" style="width: 100%;">Acessar</button>
-                <button id="cancelButton" style="display: none;"></button>
-            </div>
+            <button onclick="authenticateUser()">Acessar</button>
+            
+            <div id="message" style="color: red; margin-top: 15px;"></div>
         </div>
     </div>
 
-    <!-- Conteúdo Principal da Aplicação -->
     <div class="container" id="mainContent">
         
-        <div id="userControl">
-            <div class="user-info">
-                <span id="userNameDisplay">Usuário</span>
-                <span class="user-icon" id="userInitial">U</span>
-            </div>
-            <div class="user-options">
-                <!-- O link para o arquivo gestao_usuarios.html -->
-                <a href="gestao_usuarios.html" id="userManagementLink" style="display: none;">Incluir/Excluir Usuários</a>
-                <button id="logoutButton">Trocar Usuário</Sair</button>
-            </div>
+        <div id="userControl" onclick="logoutAndSwitchUser()">
+            <span class="user-icon" id="userInitial">U</span>
+            <span id="userNameDisplay">Usuário</span>
         </div>
 
         <h1>Automatização</h1>
@@ -888,15 +290,14 @@
             <h3>Adicionar Nova Solicitação</h3>
             <div class="input-form">
                 <input type="text" id="solicitacaoInput" placeholder="Título da Automação (Obrigatório)" required>
-                <!-- Campo de solicitante preenchido automaticamente, mas ReadOnly -->
                 <input type="text" id="solicitanteInput" placeholder="Solicitante" required readonly style="background-color: #e9ecef;">
                 <button onclick="addSolicitacao()">Adicionar</button>
             </div>
             
-            <p id="message" style="color: #c53929; text-align: center; margin-top: -15px; margin-bottom: 25px; font-weight: bold;"></p>
+            
 
             <h3>Acompanhamento de Solicitações</h3>
-            <div style="overflow-x: auto;"> <!-- Container para scroll horizontal em telas pequenas -->
+            <div style="overflow-x: auto;">
                 <table id="automationTable">
                     <thead>
                         <tr>
@@ -904,15 +305,15 @@
                             <th>Solicitante</th>
                             <th>Status</th>
                             <th>Frente</th>
-                            <th style="min-width: 90px;">Data Criação</th>
-                            <th style="min-width: 90px;">Data Conclusão</th>
-                            <th style="min-width: 90px;">Data Atualização</th>
-                            <th style="min-width: 130px;">Link Arquivo</th> 
+                            <th>Data Criação</th>
+                            <th>Data Conclusão</th>
+                            <th>Data Atualização</th>
+                            <th>Link Arquivo</th> 
                             <th>Ações</th>
                         </tr>
                     </thead>
                     <tbody id="automationTableBody">
-                        <tr><td colspan="9" style="text-align: center; color: #6a6a6a;">Carregando solicitações...</td></tr>
+                        <!-- Conteúdo dinâmico -->
                     </tbody>
                 </table>
             </div>
@@ -920,5 +321,490 @@
         </div>
 
     </div>
+    <script>
+        // Chave para armazenamento local
+        const STORAGE_KEY = 'automationRequests';
+        // Status disponíveis para as solicitações
+        const STATUSES = ['Backlog', 'Em Processo', 'Finalizado'];
+        // Usuários autorizados
+        const AUTHORIZED_EDITORS = ['RENAN MARTINS']; 
+        
+        // CORREÇÃO: Lista de usuários para o dropdown
+        const USER_LIST = [
+            'Selecione seu Nome...', // Opção Padrão
+            'Renan Martins',
+            'Vinicius', 
+            'Matheus',
+            'Diego',
+            'Renato',
+            'Lucas',
+            'Nedson',
+            'ADM'
+        ];
+        
+        // Senha de acesso para Renan (mantida internamente)
+        const AUTHORIZED_PASSWORD = 'salmos93'; 
+        
+        let CURRENT_USER = ''; 
+
+        // Função utilitária para formatar nomes
+        function formatName(name) {
+            if (!name) return '';
+            let cleanedName = name.trim().toLowerCase();
+            
+            return cleanedName.split(' ').map(word => {
+                if (word.length === 0) return '';
+                return word.charAt(0).toUpperCase() + word.slice(1);
+            }).join(' ');
+        }
+        
+        // Dados iniciais
+        const INITIAL_DATA = [
+            { title: 'Concierge', solicitant: 'Vinicius', date: '2025-10-22T00:00:00.000Z', status: 'Finalizado', team: 'ProSula', conclusionDate: '22/10/2025', updateDate: '22/10/2025', fileLink: 'https://exemplo.com/concierge' },
+            { title: 'Integração', solicitant: 'Matheus', date: '2025-10-28T00:00:00.000Z', status: 'Finalizado', team: 'Contador/Comercial', conclusionDate: '28/10/2025', updateDate: '28/10/2025', fileLink: 'https://exemplo.com/integracao' },
+            { title: 'CSP Query', solicitant: 'Diego', date: '2025-11-04T00:00:00.000Z', status: 'Finalizado', team: 'CSP', conclusionDate: '04/11/2025', updateDate: '04/11/2025', fileLink: 'https://exemplo.com/cspquery' },
+            { title: 'Reset de Senha', solicitant: 'Diego', date: '2025-11-11T00:00:00.000Z', status: 'Finalizado', team: 'CSP', conclusionDate: '11/11/2025', updateDate: '11/11/2025', fileLink: 'https://exemplo.com/reset-senha' },
+            { title: 'Paliativo', solicitant: 'Vinicius', date: new Date().toISOString(), status: 'Em Processo', team: 'Relacionamento', conclusionDate: '', updateDate: '', fileLink: '' }
+        ];
+        
+        // --- Lógica de Permissão e Autenticação ---
+        
+        function isAuthorized(user) {
+            if (!user) return false;
+            const cleanUser = user.toUpperCase().trim(); 
+            return AUTHORIZED_EDITORS.includes(cleanUser) || cleanUser === 'ADM';
+        }
+        
+        // CORREÇÃO: Verifica se Renan ou ADM estão selecionados
+        function checkIfRenan() {
+            const userNameSelect = document.getElementById('userNameSelect');
+            const userName = userNameSelect.value.trim(); 
+            const isPowerUser = isAuthorized(userName); 
+            const cpfGroup = document.getElementById('cpfInputGroup');
+            
+            if (isPowerUser) {
+                cpfGroup.style.display = 'block';
+            } else {
+                cpfGroup.style.display = 'none';
+                document.getElementById('cpfInput').value = ''; 
+            }
+        }
+        
+        // CORREÇÃO: Função de autenticação lendo do <select>
+        function authenticateUser() {
+            const userNameSelect = document.getElementById('userNameSelect');
+            const userName = userNameSelect.value.trim();
+            const messageDiv = document.getElementById('message');
+            
+            // Validação
+            if (userName === 'Selecione seu Nome...' || userName === '') {
+                messageDiv.textContent = 'Por favor, selecione seu nome para continuar.';
+                return;
+            }
+            messageDiv.textContent = '';
+
+            const isPowerUser = isAuthorized(userName); 
+            const formattedUserName = formatName(userName); 
+
+            if (isPowerUser) {
+                const passwordInput = document.getElementById('cpfInput').value.trim().toLowerCase();
+                
+                if (passwordInput !== AUTHORIZED_PASSWORD) {
+                    console.error('Erro de autenticação: Senha incorreta.');
+                    messageDiv.textContent = 'Senha incorreta. Acesso negado.';
+                    return;
+                }
+            }
+
+            CURRENT_USER = formattedUserName; 
+            localStorage.setItem('lastUser', CURRENT_USER); 
+            
+            document.getElementById('authModal').style.display = 'none';
+            document.getElementById('mainContent').style.display = 'block';
+
+            document.getElementById('solicitanteInput').value = CURRENT_USER;
+            updateUserDisplay(CURRENT_USER);
+            
+            renderTable();
+        }
+
+        function logoutAndSwitchUser() {
+            CURRENT_USER = '';
+            localStorage.removeItem('lastUser');
+            
+            document.getElementById('mainContent').style.display = 'none';
+            document.getElementById('authModal').style.display = 'flex';
+            
+            // Volta o select para a opção padrão
+            document.getElementById('userNameSelect').value = USER_LIST[0]; 
+            document.getElementById('cpfInput').value = '';
+            document.getElementById('cpfInputGroup').style.display = 'none'; 
+            document.getElementById('solicitanteInput').value = ''; 
+            document.getElementById('message').textContent = '';
+        }
+
+        function updateUserDisplay(userName) {
+            const formattedName = formatName(userName); 
+            const initial = formattedName.trim().toUpperCase().charAt(0);
+            document.getElementById('userNameDisplay').textContent = formattedName;
+            document.getElementById('userInitial').textContent = initial;
+            document.getElementById('userControl').style.display = 'flex';
+        }
+
+        function canDelete(user, status) {
+            const isPowerUser = isAuthorized(user); 
+            const cleanStatus = status.toUpperCase().trim();
+            
+            const requiresRenanPermission = cleanStatus === 'EM PROCESSO' || cleanStatus === 'FINALIZADO';
+            
+            if (requiresRenanPermission) {
+                return isPowerUser;
+            }
+            
+            if (cleanStatus === 'BACKLOG') {
+                return true;
+            }
+
+            return false;
+        }
+
+        // --- Funções de Data e Persistência ---
+        
+        function loadRequests() {
+            let requests = localStorage.getItem(STORAGE_KEY);
+            
+            if (!requests) {
+                saveRequests(INITIAL_DATA);
+                requests = JSON.stringify(INITIAL_DATA);
+            }
+            
+            let loadedRequests = JSON.parse(requests);
+            loadedRequests = loadedRequests.map(req => {
+                if (req.status === 'Concluído') {
+                    req.status = 'Finalizado';
+                }
+                req.solicitant = formatName(req.solicitant); 
+                return req;
+            });
+            return loadedRequests;
+        }
+
+        function saveRequests(requests) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(requests));
+        }
+
+        function formatDate(date) {
+            if (typeof date === 'string' && date.includes('/')) return date;
+            if (!date) return '';
+            const d = new Date(date);
+            if (isNaN(d.getTime())) return ''; 
+            return d.toLocaleDateString('pt-BR'); 
+        }
+        
+        // --- Funções de Renderização ---
+        
+        function renderTable() {
+            const tbody = document.getElementById('automationTableBody');
+            tbody.innerHTML = '';
+            const requests = loadRequests();
+            const canEditRestrictedFields = isAuthorized(CURRENT_USER); 
+
+            if (requests.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: #6a6a6a;">Nenhuma solicitação em andamento.</td></tr>'; 
+                return;
+            }
+
+            requests.forEach((req, index) => {
+                const tr = document.createElement('tr');
+                
+                tr.appendChild(createEditableCell(req.title, index, 'title', false));
+                tr.appendChild(createEditableCell(req.solicitant, index, 'solicitant', false)); 
+                tr.appendChild(createStatusCell(req, index, canEditRestrictedFields));
+                tr.appendChild(createEditableCell(req.team || '', index, 'team', false));
+                tr.appendChild(createReadOnlyCell(formatDate(req.date)));
+
+                const conclusionDateCell = createEditableCell(req.conclusionDate || '', index, 'conclusionDate', !canEditRestrictedFields);
+                if (canEditRestrictedFields) conclusionDateCell.className += ' editable-renan';
+                tr.appendChild(conclusionDateCell);
+                
+                tr.appendChild(createReadOnlyCell(formatDate(req.updateDate)));
+
+                const linkFileCell = createLinkFileCell(req, index, !canEditRestrictedFields);
+                tr.appendChild(linkFileCell);
+
+                const actionsCell = document.createElement('td');
+                
+                if (canDelete(CURRENT_USER, req.status)) {
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.textContent = 'Excluir';
+                    deleteBtn.className = 'action-btn delete-btn';
+                    deleteBtn.onclick = () => deleteRequest(index);
+                    actionsCell.appendChild(deleteBtn);
+                }
+                tr.appendChild(actionsCell);
+
+                tbody.appendChild(tr);
+            });
+        }
+        
+        function createLinkFileCell(req, index, isRestricted) {
+            const cell = document.createElement('td');
+            cell.className = 'file-link-cell';
+            const canEdit = !isRestricted; 
+            const fileLink = req.fileLink ? req.fileLink.trim() : '';
+
+            if (canEdit) {
+                 cell.className += ' editable-renan';
+                 cell.setAttribute('contenteditable', 'true');
+                 cell.textContent = fileLink || 'Adicionar link...';
+                 
+                 cell.onblur = (e) => {
+                    let newText = e.target.textContent.trim();
+                    if (newText === 'Adicionar link...') {
+                        newText = '';
+                    }
+                    updateRequest(index, 'fileLink', newText);
+                 };
+                 cell.onfocus = (e) => {
+                    if (e.target.textContent === 'Adicionar link...') {
+                        e.target.textContent = '';
+                    }
+                 };
+                 
+            } else if (fileLink !== '') {
+                 const link = document.createElement('a');
+                 const fullUrl = fileLink.startsWith('http') ? fileLink : `http://${fileLink}`;
+                 link.href = fullUrl;
+                 link.target = '_blank'; 
+                 link.textContent = 'Acessar Link'; 
+                 link.title = fileLink; 
+                 
+                 cell.appendChild(link);
+                 cell.setAttribute('contenteditable', 'false');
+            } else {
+                 cell.textContent = '-';
+                 cell.setAttribute('contenteditable', 'false');
+            }
+            
+            return cell;
+        }
+
+        function createReadOnlyCell(content) {
+            const cell = document.createElement('td');
+            cell.textContent = content;
+            cell.setAttribute('contenteditable', 'false');
+            return cell;
+        }
+
+        function createEditableCell(content, index, fieldName, isRestricted) {
+            const cell = document.createElement('td');
+            cell.textContent = content;
+            cell.setAttribute('contenteditable', isRestricted ? 'false' : 'true');
+            
+            if (!isRestricted) {
+                cell.onblur = (e) => {
+                    let newValue = e.target.textContent;
+                    if (fieldName === 'solicitant') {
+                        newValue = formatName(newValue); 
+                    }
+                    updateRequest(index, fieldName, newValue);
+                }
+            }
+            
+            return cell;
+        }
+        
+        function createStatusCell(req, index, canEdit) {
+            const statusCell = document.createElement('td');
+            const statusClass = `status-${req.status.toLowerCase().replace(' ', '-')}`;
+
+            if (canEdit) {
+                const select = document.createElement('select');
+                select.className = `status-select ${statusClass}`;
+                
+                STATUSES.forEach(status => {
+                    const option = document.createElement('option');
+                    option.value = status;
+                    option.textContent = status;
+                    if (req.status === status) {
+                        option.selected = true;
+                    }
+                    select.appendChild(option);
+                });
+
+                select.onchange = (e) => {
+                    updateRequest(index, 'status', e.target.value);
+                    e.target.className = `status-select status-${e.target.value.toLowerCase().replace(' ', '-')}`;
+                };
+                statusCell.appendChild(select);
+
+            } else {
+                const span = document.createElement('span');
+                span.textContent = req.status;
+                span.className = `status-display ${statusClass}`; 
+                statusCell.appendChild(span);
+            }
+            
+            return statusCell;
+        }
+        
+        // --- Funções CRUD ---
+        
+        function addSolicitacao() {
+            const titleInput = document.getElementById('solicitacaoInput');
+            // CORREÇÃO: Pegando a div de mensagem correta (dentro do modal está #message, no form não tinha id)
+            const formMessageDiv = document.querySelector('.tool-section #message'); 
+            
+            // Se a div de mensagem não existir no form, criamos uma (fallback)
+             if (!formMessageDiv) {
+                 formMessageDiv = document.createElement('div');
+                 formMessageDiv.id = 'form-message';
+                 formMessageDiv.style.color = 'red';
+                 formMessageDiv.style.marginBottom = '10px';
+                 const inputForm = document.querySelector('.input-form');
+                 inputForm.parentNode.insertBefore(formMessageDiv, inputForm.nextSibling);
+             }
+
+
+            const title = titleInput.value.trim();
+            const solicitant = CURRENT_USER; 
+
+            if (!title || !solicitant) {
+                formMessageDiv.textContent = 'Por favor, preencha o Título da Automação.';
+                return;
+            }
+            formMessageDiv.textContent = ''; 
+
+            const newRequest = {
+                title: title,
+                solicitant: solicitant,
+                date: new Date().toISOString(),
+                status: 'Backlog',
+                team: '',
+                conclusionDate: '',
+                updateDate: new Date().toLocaleDateString('pt-BR'), 
+                fileLink: ''
+            };
+
+            const requests = loadRequests();
+            requests.push(newRequest);
+            saveRequests(requests);
+
+            titleInput.value = '';
+            renderTable();
+        }
+
+        function updateRequest(index, field, value) {
+            const requests = loadRequests();
+            if (requests[index]) {
+                const oldValue = requests[index][field];
+                
+                // Se o valor for "Adicionar link...", salva como vazio
+                let newValue = value.trim();
+                if (field === 'fileLink' && newValue === 'Adicionar link...') {
+                    newValue = '';
+                }
+                
+                requests[index][field] = newValue;
+                
+                if (field !== 'updateDate' && oldValue !== newValue) {
+                    requests[index].updateDate = new Date().toLocaleDateString('pt-BR'); 
+                }
+                
+                if (field === 'conclusionDate' && newValue === '') {
+                    requests[index].conclusionDate = '';
+                }
+
+                saveRequests(requests);
+                renderTable(); 
+            }
+        }
+
+        function deleteRequest(index) {
+            const requests = loadRequests();
+            if (!requests[index]) return; // Proteção caso o índice não exista
+            
+            const status = requests[index].status;
+            
+            if (!canDelete(CURRENT_USER, status)) {
+                // Mensagem de erro no formulário principal
+                const formMessageDiv = document.querySelector('.tool-section #message') || document.getElementById('message');
+                if(formMessageDiv) formMessageDiv.textContent = 'A exclusão de tarefas "Em Processo" ou "Finalizadas" é restrita a usuários autorizados (Renan Martins/ADM).';
+                console.warn('Tentativa de exclusão não autorizada.');
+                return;
+            }
+            
+            // Usando o confirm() nativo do navegador
+            if (window.confirm(`Tem certeza que deseja excluir a solicitação "${requests[index].title}"?`)) {
+                requests.splice(index, 1);
+                saveRequests(requests);
+                renderTable();
+            }
+        }
+        
+        // CORREÇÃO: Preenche o dropdown de usuários na inicialização
+        function populateUserSelect() {
+            const select = document.getElementById('userNameSelect');
+            select.innerHTML = ''; // Limpa antes de preencher
+            
+            USER_LIST.forEach(user => {
+                const option = document.createElement('option');
+                option.value = user;
+                option.textContent = user;
+                // A opção "Selecione seu Nome..." será a primeira e selecionada por padrão
+                if (user === USER_LIST[0]) {
+                    option.disabled = true;
+                    option.selected = true;
+                }
+                select.appendChild(option);
+            });
+            
+            // Reatribui o evento de mudança (onchange)
+            select.onchange = checkIfRenan;
+        }
+
+
+        // Inicialização
+        window.onload = () => {
+            // PASSO 1: Preenche o SELECT IMEDIATAMENTE.
+            populateUserSelect(); 
+            
+            const lastUser = localStorage.getItem('lastUser');
+            if (lastUser) {
+                 // Lógica para usuário que já estava logado
+                 CURRENT_USER = formatName(lastUser); 
+                 document.getElementById('solicitanteInput').value = CURRENT_USER;
+                 updateUserDisplay(CURRENT_USER);
+                 document.getElementById('authModal').style.display = 'none';
+                 document.getElementById('mainContent').style.display = 'block';
+                 
+                 // Seleciona o usuário correto no dropdown, que AGORA está preenchido
+                 const userSelect = document.getElementById('userNameSelect');
+                 // Tenta encontrar o usuário salvo na lista
+                 const foundUser = USER_LIST.find(u => formatName(u) === CURRENT_USER);
+                 
+                 if (foundUser) {
+                     userSelect.value = foundUser;
+                 } else {
+                     // Se o usuário salvo não existe mais na lista, força o logout
+                     userSelect.value = USER_LIST[0]; 
+                     logoutAndSwitchUser(); // Força o logout
+                     return; // Para a execução do onload aqui
+                 }
+                 
+                 checkIfRenan(); // Verifica se Renan/ADM está selecionado
+                 renderTable();
+
+            } else {
+                 // Lógica para novo acesso: exibe o modal
+                 document.getElementById('authModal').style.display = 'flex';
+                 // Garante que o dropdown esteja na opção padrão
+                 document.getElementById('userNameSelect').value = USER_LIST[0]; 
+            }
+            
+            // Garante que a autenticação funcione ao clicar no botão
+            document.querySelector('.modal-content button').onclick = authenticateUser; 
+        };
+    </script>
 </body>
 </html>
