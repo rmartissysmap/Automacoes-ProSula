@@ -25,7 +25,7 @@
         h2 { color: #6a6a6a; font-size: 1.2em; font-weight: 300; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; margin-top: 0; margin-bottom: 30px; text-align: center; }
         .tool-section { min-height: 200px; padding: 10px; }
 
-        /* User Control (NOVO ESTILO PROFISSIONAL) */
+        /* --- NOVO PAINEL DE USUÁRIO PROFISSIONAL --- */
         #userControl {
             position: absolute;
             top: 20px;
@@ -44,7 +44,7 @@
         .user-info {
              display: flex;
              align-items: center;
-             cursor: default; /* Não é mais clicável */
+             cursor: default;
         }
         .user-icon {
             width: 30px; height: 30px; background-color: #0070d2; color: white; border-radius: 50%;
@@ -57,62 +57,109 @@
             display: flex;
             flex-direction: column;
             align-items: flex-end;
+            width: 100%;
         }
-        .user-options a, .user-options button {
-            background: none; border: none; color: #0070d2; text-decoration: none;
-            padding: 2px 0; cursor: pointer; font-size: 0.9em; font-weight: 600;
-        }
-        .user-options a:hover, .user-options button:hover {
-            text-decoration: underline;
-        }
-        #userManagementLink {
-            font-size: 0.8em;
-            font-weight: bold;
-            color: #1a1a1a;
-            margin-bottom: 4px;
+        /* Links de Gerenciamento */
+        #userManagementLink, #towerManagementLink {
+            background: none; border: none;
+            color: #0070d2;
+            text-decoration: none;
+            padding: 2px 0; cursor: pointer; 
+            font-size: 0.9em; font-weight: 600;
+            display: none; /* Oculto por padrão, JS mostra para ADM */
         }
         #logoutButton {
-            font-size: 0.8em;
+            background: none; border: none;
             color: #c53929; /* Vermelho para Sair */
+            text-decoration: none;
+            padding: 2px 0; cursor: pointer; 
+            font-size: 0.9em; font-weight: 600;
         }
+        #userManagementLink:hover, #logoutButton:hover, #towerManagementLink:hover {
+            text-decoration: underline;
+        }
+        /* --- FIM DO NOVO PAINEL --- */
 
 
-        /* Formulário de Input */
+        /* Formulário de Input (ATUALIZADO) */
         .input-form {
             display: grid;
-            grid-template-columns: 2fr 1.5fr 1fr;
+            /* Título | Torre | Frente | Botão */
+            grid-template-columns: 2fr 1fr 1fr auto; 
             gap: 15px;
             margin-bottom: 30px;
             padding: 20px;
             border: 1px solid #d0d0d0;
             border-radius: 8px;
             background-color: #f5f5f5;
+            align-items: end; /* Alinha os itens na base */
         }
-        .input-form input[type="text"] {
+        .input-form input[type="text"],
+        .input-form select {
             padding: 10px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box;
+            background-color: white;
+            height: 40px; /* Altura padrão */
         }
         .input-form button {
             padding: 10px; background-color: #0070d2; color: white; border: none; border-radius: 4px;
             cursor: pointer; transition: background-color 0.2s;
+            height: 40px;
         }
         .input-form button:hover { background-color: #005aa3; }
+        .input-form div {
+            display: flex;
+            flex-direction: column;
+        }
+        .input-form label {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
 
-        /* Tabela */
+        /* --- Tabela (COLUNAS AJUSTADAS) --- */
         #automationTable { 
-            width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.9em; table-layout: fixed; 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-top: 20px; 
+            font-size: 0.9em; 
         }
         #automationTable th, #automationTable td { 
-            padding: 10px 8px; text-align: left; border-bottom: 1px solid #e0e0e0; word-wrap: break-word; 
+            padding: 10px 8px; 
+            text-align: left; 
+            border-bottom: 1px solid #e0e0e0; 
+            vertical-align: middle;
+            word-wrap: break-word; 
         } 
         #automationTable th { 
-            background-color: #0070d2; color: white; font-weight: 600; font-size: 1em; 
+            background-color: #0070d2; 
+            color: white; 
+            font-weight: 600; 
+            font-size: 1em; 
         }
         #automationTable tr:nth-child(even) { background-color: #f9f9f9; }
         
-        #automationTable th:nth-child(1), #automationTable td:nth-child(1) { width: 25%; } 
-        #automationTable th:nth-child(2), #automationTable td:nth-child(2) { width: 15%; } 
-        #automationTable th:nth-child(3), #automationTable td:nth-child(3) { width: 12%; } 
-        /* ... (restante dos estilos da tabela) ... */
+        /* --- Ajustes de Largura das Colunas --- */
+        #automationTable th:nth-child(1), #automationTable td:nth-child(1) { width: 30%; } /* Título */
+        #automationTable th:nth-child(2), #automationTable td:nth-child(2) { width: 15%; } /* Solicitante */
+        #automationTable th:nth-child(4), #automationTable td:nth-child(4) { width: 20%; } /* Frente / Torre */
+        #automationTable th:nth-child(3), #automationTable td:nth-child(3) { 
+            width: 120px; /* Status */
+            white-space: nowrap;
+        }
+        #automationTable th:nth-child(5), #automationTable td:nth-child(5), /* Criação */
+        #automationTable th:nth-child(6), #automationTable td:nth-child(6), /* Conclusão */
+        #automationTable th:nth-child(7), #automationTable td:nth-child(7) { /* Atualização */
+            width: 110px; 
+            white-space: nowrap;
+        }
+        #automationTable th:nth-child(8), #automationTable td:nth-child(8) { /* Link Arquivo */
+            width: 120px; 
+        } 
+        #automationTable th:nth-child(9), #automationTable td:nth-child(9) { /* Ações */
+            width: 80px; 
+            text-align: center;
+        } 
 
 
         /* Campos Editáveis */
@@ -127,7 +174,7 @@
             -webkit-appearance: none; -moz-appearance: none; appearance: none; cursor: default;
             display: inline-block; box-sizing: border-box; width: 100%;
         }
-        .status-select { cursor: pointer; width: 90%; }
+        .status-select { cursor: pointer; } 
         .status-display { border: none !important; }
         
         /* Cores */
@@ -146,9 +193,11 @@
         .delete-btn { color: #c53929; }
         .delete-btn:hover { color: #a32e22; }
 
-        /* Estilo para links */
+        /* Estilo para links (AJUSTADO) */
         .file-link-cell { 
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; 
+            white-space: nowrap; 
+            overflow: hidden; 
+            text-overflow: ellipsis; 
         }
         .file-link-cell a {
             color: #0070d2; text-decoration: none; font-weight: bold; 
@@ -194,7 +243,7 @@
 
     <div id="authModal">
         <div class="modal-content">
-            <h3>Bem-vindo(a) à Gestão de Automações</h3>
+            <h3>Bem-vindo(a) à Gestão de Solicitações</h3>
             <p>Por favor, **selecione** seu nome completo para começar:</p>
             
             <select id="userNameSelect">
@@ -213,15 +262,17 @@
 
     <div class="container" id="mainContent">
         
-        <!-- NOVO PAINEL DE USUÁRIO -->
+        <!-- PAINEL DE USUÁRIO ATUALIZADO -->
         <div id="userControl">
             <div class="user-info">
                 <span id="userNameDisplay">Usuário</span>
                 <span class="user-icon" id="userInitial">U</span>
             </div>
             <div class="user-options">
-                <!-- Link para a nova página, só aparece para ADM -->
-                <a href="InclusãoExclusãoUsuário.html" id="userManagementLink" style="display: none;">Gerenciar Usuários</a>
+                <!-- LINK PARA GERENCIAR USUÁRIOS -->
+                <a href="incluriexcluir.html" id="userManagementLink">Gerenciar Usuários</a>
+                <!-- NOVO LINK PARA GERENCIAR TORRES -->
+                <a href="gestao_torres.html" id="towerManagementLink">Gerenciar Torres</a>
                 <button id="logoutButton">Trocar Usuário</button>
             </div>
         </div>
@@ -232,13 +283,30 @@
         <div class="tool-section">
 
             <h3>Adicionar Nova Solicitação</h3>
+            <!-- FORMULÁRIO ATUALIZADO COM TORRE E FRENTE -->
             <div class="input-form">
-                <input type="text" id="solicitacaoInput" placeholder="Título da Automação (Obrigatório)" required>
-                <input type="text" id="solicitanteInput" placeholder="Solicitante" required readonly style="background-color: #e9ecef;">
+                <div>
+                    <label for="solicitacaoInput">Título da Automação</label>
+                    <input type="text" id="solicitacaoInput" placeholder="Título da Automação (Obrigatório)" required>
+                </div>
+                <div>
+                    <label for="torreSelect">Torre</label>
+                    <select id="torreSelect">
+                        <option value="">Selecione a Torre</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="frenteSelect">Frente</label>
+                    <select id="frenteSelect">
+                        <option value="">Selecione a Torre Primeiro</option>
+                    </select>
+                </div>
+                
+                <input type="hidden" id="solicitanteInput" readonly>
+                
                 <button onclick="addSolicitacao()">Adicionar</button>
             </div>
             
-            <!-- Div de mensagem para o formulário (antes estava no modal) -->
             <div id="formMessage" style="color: red; margin-bottom: 10px; text-align: center; font-weight: bold;"></div>
 
             <h3>Acompanhamento de Solicitações</h3>
@@ -249,7 +317,7 @@
                             <th>Título da Automação</th>
                             <th>Solicitante</th>
                             <th>Status</th>
-                            <th>Frente</th>
+                            <th>Frente / Torre</th> <!-- Coluna atualizada -->
                             <th>Data Criação</th>
                             <th>Data Conclusão</th>
                             <th>Data Atualização</th>
@@ -269,48 +337,50 @@
         // Chaves para armazenamento local
         const REQUEST_STORAGE_KEY = 'automationRequests';
         const USER_STORAGE_KEY = 'automationUserList'; // CHAVE COMPARTILHADA
+        const TORRE_STORAGE_KEY = 'automationTowersList'; // NOVA CHAVE COMPARTILHADA
         
         const STATUSES = ['Backlog', 'Em Processo', 'Finalizado'];
-        const AUTHORIZED_EDITORS = ['RENAN MARTINS', 'ADM']; 
         
-        // Lista de usuários PADRÃO (só usada se o localStorage estiver vazio)
+        // --- ATUALIZAÇÃO DE PERMISSÃO ---
+        // Apenas 'ADM' é editor
+        const AUTHORIZED_EDITORS = ['ADM']; 
+        
         const DEFAULT_USERS = [
-            'Selecione seu Nome...', // Opção Padrão
-            'Renan Martins',
-            'Vinicius', 
-            'Matheus',
-            'Diego',
-            'Renato',
-            'Lucas',
-            'Nedson',
-            'ADM'
+            'Selecione seu Nome...', 'Renan Martins', 'Vinicius', 'Matheus',
+            'Diego', 'Renato', 'Lucas', 'Nedson', 'ADM'
         ];
         
         const AUTHORIZED_PASSWORD = 'salmos93'; 
         let CURRENT_USER = ''; 
+        let ALL_TOWERS = []; // Armazena os dados das torres
 
         // --- FUNÇÕES DE DADOS (localStorage) ---
         
-        /** Carrega a lista de usuários do localStorage. */
         function loadUserList() {
             let users = localStorage.getItem(USER_STORAGE_KEY);
-            if (!users) {
-                // Se não existir, cria a lista padrão
+            if (!users || JSON.parse(users).length === 0) {
                 localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(DEFAULT_USERS));
                 return DEFAULT_USERS;
             }
             return JSON.parse(users);
         }
+        
+        // NOVA FUNÇÃO: Carrega dados das Torres
+        function loadTowersData() {
+            let towers = localStorage.getItem(TORRE_STORAGE_KEY);
+            if (towers) {
+                ALL_TOWERS = JSON.parse(towers);
+            }
+            // Se não houver, ALL_TOWERS ficará vazio (será preenchido na outra página)
+        }
 
-        /** Carrega as solicitações do localStorage. */
         function loadRequests() {
             let requests = localStorage.getItem(REQUEST_STORAGE_KEY);
             if (!requests) {
-                // Se não existir, cria os dados iniciais
                 const initialData = [
-                    { title: 'Concierge', solicitant: 'Vinicius', date: '2025-10-22T00:00:00.000Z', status: 'Finalizado', team: 'ProSula', conclusionDate: '22/10/2025', updateDate: '22/10/2025', fileLink: 'https://exemplo.com/concierge' },
-                    { title: 'Integração', solicitant: 'Matheus', date: '2025-10-28T00:00:00.000Z', status: 'Finalizado', team: 'Contador/Comercial', conclusionDate: '28/10/2025', updateDate: '28/10/2025', fileLink: 'https://exemplo.com/integracao' },
-                    { title: 'Paliativo', solicitant: 'Vinicius', date: new Date().toISOString(), status: 'Em Processo', team: 'Relacionamento', conclusionDate: '', updateDate: '', fileLink: '' }
+                    { title: 'Concierge', solicitant: 'Vinicius', date: '2025-10-22T00:00:00.000Z', status: 'Finalizado', team: 'Delta / ProSula', conclusionDate: '22/10/2025', updateDate: '22/10/2025', fileLink: 'https://exemplo.com/concierge' },
+                    { title: 'Integração', solicitant: 'Matheus', date: '2025-10-28T00:00:00.000Z', status: 'Finalizado', team: 'Gama / Cotador/Multicanalidade (Comercial)', conclusionDate: '28/10/2025', updateDate: '28/10/2025', fileLink: 'https://exemplo.com/integracao' },
+                    { title: 'Paliativo', solicitant: 'Vinicius', date: new Date().toISOString(), status: 'Em Processo', team: 'Delta / Relacionamento (Gestão de Leads, Transf, Com e Rex)', conclusionDate: '', updateDate: '', fileLink: '' }
                 ];
                 saveRequests(initialData);
                 requests = JSON.stringify(initialData);
@@ -341,14 +411,14 @@
         function isAuthorized(user) {
             if (!user) return false;
             const cleanUser = formatName(user).toUpperCase().trim(); 
-            // Compara formatado para garantir "Renan Martins" e "renan martins" sejam iguais
-            return AUTHORIZED_EDITORS.includes(cleanUser);
+            return AUTHORIZED_EDITORS.includes(cleanUser); // Apenas 'ADM'
         }
         
-        function checkIfRenan() {
+        // Renomeado para 'checkIfPowerUser'
+        function checkIfPowerUser() {
             const userNameSelect = document.getElementById('userNameSelect');
             const userName = userNameSelect.value.trim(); 
-            const isPowerUser = isAuthorized(userName); 
+            const isPowerUser = isAuthorized(userName); // Só 'ADM' será true
             const cpfGroup = document.getElementById('cpfInputGroup');
             
             if (isPowerUser) {
@@ -370,7 +440,7 @@
             }
             messageDiv.textContent = '';
 
-            const isPowerUser = isAuthorized(userName); 
+            const isPowerUser = isAuthorized(userName); // True apenas para 'ADM'
             const formattedUserName = formatName(userName); 
 
             if (isPowerUser) {
@@ -401,10 +471,9 @@
             document.getElementById('userControl').style.display = 'none'; // Esconde o painel do usuário
             document.getElementById('authModal').style.display = 'flex';
             
-            // Recarrega a lista de usuários no dropdown
             populateUserSelect(); 
             const userSelect = document.getElementById('userNameSelect');
-            userSelect.value = loadUserList()[0]; // Volta para "Selecione seu Nome..."
+            userSelect.value = loadUserList()[0];
             
             document.getElementById('cpfInput').value = '';
             document.getElementById('cpfInputGroup').style.display = 'none'; 
@@ -412,20 +481,22 @@
             document.getElementById('message').textContent = '';
         }
 
+        // ATUALIZADO: Mostra links de gerenciamento SÓ PARA ADM
         function updateUserDisplay(userName) {
             const formattedName = formatName(userName); 
             const initial = formattedName.trim().toUpperCase().charAt(0);
             document.getElementById('userNameDisplay').textContent = formattedName;
             document.getElementById('userInitial').textContent = initial;
             
-            // MOSTRA O LINK DE GERENCIAR USUÁRIOS SE FOR ADM
-            document.getElementById('userManagementLink').style.display = isAuthorized(CURRENT_USER) ? 'block' : 'none';
+            const isAdm = isAuthorized(CURRENT_USER); // Apenas ADM
+            document.getElementById('userManagementLink').style.display = isAdm ? 'block' : 'none';
+            document.getElementById('towerManagementLink').style.display = isAdm ? 'block' : 'none';
             
             document.getElementById('userControl').style.display = 'flex';
         }
 
         function canDelete(user, status) {
-            const isPowerUser = isAuthorized(user); 
+            const isPowerUser = isAuthorized(user); // Apenas ADM
             const cleanStatus = status.toUpperCase().trim();
             
             if (cleanStatus === 'EM PROCESSO' || cleanStatus === 'FINALIZADO') {
@@ -448,7 +519,7 @@
             const tbody = document.getElementById('automationTableBody');
             tbody.innerHTML = '';
             const requests = loadRequests();
-            const canEditRestrictedFields = isAuthorized(CURRENT_USER); 
+            const canEditRestrictedFields = isAuthorized(CURRENT_USER); // Apenas ADM
 
             if (requests.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: #6a6a6a;">Nenhuma solicitação em andamento.</td></tr>'; 
@@ -460,7 +531,10 @@
                 tr.appendChild(createEditableCell(req.title, index, 'title', false));
                 tr.appendChild(createEditableCell(req.solicitant, index, 'solicitant', false)); 
                 tr.appendChild(createStatusCell(req, index, canEditRestrictedFields));
-                tr.appendChild(createEditableCell(req.team || '', index, 'team', false));
+                
+                // Coluna 'team' agora é 'Frente / Torre'
+                tr.appendChild(createReadOnlyCell(req.team || 'N/A')); 
+                
                 tr.appendChild(createReadOnlyCell(formatDate(req.date)));
 
                 const conclusionDateCell = createEditableCell(req.conclusionDate || '', index, 'conclusionDate', !canEditRestrictedFields);
@@ -486,7 +560,7 @@
         function createLinkFileCell(req, index, isRestricted) {
             const cell = document.createElement('td');
             cell.className = 'file-link-cell';
-            const canEdit = !isRestricted; 
+            const canEdit = !isRestricted; // CanEdit agora é true apenas para ADM
             const fileLink = req.fileLink ? req.fileLink.trim() : '';
 
             if (canEdit) {
@@ -514,8 +588,7 @@
             } else {
                  cell.textContent = '-';
             }
-            cell.setAttribute('contenteditable', 'false'); // A célula em si não é editável
-            if (canEdit) cell.querySelector('div, a')?.setAttribute('contenteditable', 'true');
+            cell.setAttribute('contenteditable', 'false'); 
             
             return cell;
         }
@@ -527,9 +600,23 @@
             return cell;
         }
 
+        // Célula editável (Título, Solicitante, etc.)
         function createEditableCell(content, index, fieldName, isRestricted) {
             const cell = document.createElement('td');
             cell.textContent = content;
+            
+            // ATUALIZAÇÃO: Apenas ADM pode editar campos restritos
+            const restrictedFields = ['conclusionDate', 'fileLink'];
+            const actualRestricted = (restrictedFields.includes(fieldName) && !isAuthorized(CURRENT_USER));
+            
+            // Título, Solicitante e Frente (team) NÃO são restritos
+            const nonRestrictedFields = ['title', 'solicitant', 'team'];
+            if(nonRestrictedFields.includes(fieldName)) {
+                isRestricted = false;
+            } else {
+                isRestricted = actualRestricted;
+            }
+            
             cell.setAttribute('contenteditable', isRestricted ? 'false' : 'true');
             
             if (!isRestricted) {
@@ -544,7 +631,7 @@
             return cell;
         }
         
-        function createStatusCell(req, index, canEdit) {
+        function createStatusCell(req, index, canEdit) { // canEdit agora é true apenas para ADM
             const statusCell = document.createElement('td');
             const statusClass = `status-${req.status.toLowerCase().replace(' ', '-')}`;
 
@@ -572,16 +659,29 @@
             return statusCell;
         }
         
-        // --- Funções CRUD ---
+        // --- Funções CRUD (ATUALIZADA) ---
         
         function addSolicitacao() {
             const titleInput = document.getElementById('solicitacaoInput');
+            const torreSelect = document.getElementById('torreSelect');
+            const frenteSelect = document.getElementById('frenteSelect');
             const formMessageDiv = document.getElementById('formMessage');
+            
             const title = titleInput.value.trim();
+            const torreName = torreSelect.value ? torreSelect.options[torreSelect.selectedIndex].text : '';
+            const frenteName = frenteSelect.value ? frenteSelect.options[frenteSelect.selectedIndex].text : '';
             const solicitant = CURRENT_USER; 
 
-            if (!title || !solicitant) {
-                formMessageDiv.textContent = 'Por favor, preencha o Título da Automação.';
+            if (!title || !torreName || !frenteName) {
+                formMessageDiv.textContent = 'Título, Torre e Frente são obrigatórios.';
+                return;
+            }
+            if (torreSelect.value === "") {
+                formMessageDiv.textContent = 'Por favor, selecione uma Torre.';
+                return;
+            }
+            if (frenteSelect.value === "") {
+                 formMessageDiv.textContent = 'Por favor, selecione uma Frente.';
                 return;
             }
             formMessageDiv.textContent = ''; 
@@ -591,7 +691,7 @@
                 solicitant: solicitant,
                 date: new Date().toISOString(),
                 status: 'Backlog',
-                team: '',
+                team: `${torreName} / ${frenteName}`, // Salva a Torre e Frente
                 conclusionDate: '',
                 updateDate: new Date().toLocaleDateString('pt-BR'), 
                 fileLink: ''
@@ -601,7 +701,11 @@
             requests.push(newRequest);
             saveRequests(requests);
 
+            // Reseta o formulário
             titleInput.value = '';
+            torreSelect.selectedIndex = 0;
+            frenteSelect.innerHTML = '<option value="">Selecione a Torre Primeiro</option>';
+            
             renderTable();
         }
 
@@ -628,7 +732,7 @@
             const status = requests[index].status;
             
             if (!canDelete(CURRENT_USER, status)) {
-                document.getElementById('formMessage').textContent = 'A exclusão de tarefas "Em Processo" ou "Finalizadas" é restrita a usuários autorizados (Renan Martins/ADM).';
+                document.getElementById('formMessage').textContent = 'A exclusão de tarefas "Em Processo" ou "Finalizadas" é restrita ao ADM.';
                 return;
             }
             
@@ -636,6 +740,44 @@
                 requests.splice(index, 1);
                 saveRequests(requests);
                 renderTable();
+            }
+        }
+        
+        // --- NOVAS FUNÇÕES (Dropdowns de Torre/Frente) ---
+        
+        function populateTorreSelect() {
+            const select = document.getElementById('torreSelect');
+            select.innerHTML = '<option value="">Selecione a Torre</option>'; // Limpa
+            
+            ALL_TOWERS.forEach(torre => {
+                const option = document.createElement('option');
+                option.value = torre.id; // Salva o ID da torre
+                option.textContent = torre.nome;
+                select.appendChild(option);
+            });
+        }
+        
+        function populateFrenteSelect(torreId) {
+            const select = document.getElementById('frenteSelect');
+            select.innerHTML = '<option value="">Selecione a Frente</option>'; // Limpa
+            
+            if (!torreId) {
+                select.innerHTML = '<option value="">Selecione a Torre Primeiro</option>';
+                return;
+            }
+            
+            const torre = ALL_TOWERS.find(t => t.id == torreId); // Usa == para comparar (valor pode ser string)
+            
+            if (torre && torre.frentes) {
+                 // Ordena as frentes alfabeticamente
+                const sortedFrentes = [...torre.frentes].sort((a, b) => a.nome.localeCompare(b.nome));
+
+                sortedFrentes.forEach(frente => {
+                    const option = document.createElement('option');
+                    option.value = frente.id; // Salva o ID da frente
+                    option.textContent = frente.nome;
+                    select.appendChild(option);
+                });
             }
         }
         
@@ -657,18 +799,21 @@
                 select.appendChild(option);
             });
             
-            select.onchange = checkIfRenan;
+            select.onchange = checkIfPowerUser; // ATUALIZADO
         }
 
 
         // --- Inicialização ---
         window.onload = () => {
-            // PASSO 1: Preenche o SELECT com usuários do localStorage.
+            // PASSO 1: Carrega os dados de Torres e Usuários
+            loadTowersData(); // Carrega ALL_TOWERS
             populateUserSelect(); 
+            populateTorreSelect(); // Popula o dropdown de Torres no formulário
             
+            // PASSO 2: Cuida do Login
             const lastUser = localStorage.getItem('lastUser');
             const userSelect = document.getElementById('userNameSelect');
-            const users = loadUserList(); // Pega a lista atual
+            const users = loadUserList(); 
 
             if (lastUser) {
                  const foundUser = users.find(u => formatName(u) === formatName(lastUser));
@@ -680,22 +825,26 @@
                      updateUserDisplay(CURRENT_USER);
                      document.getElementById('authModal').style.display = 'none';
                      document.getElementById('mainContent').style.display = 'block';
-                     userSelect.value = foundUser; // Define o valor no dropdown
-                     checkIfRenan(); // Verifica se Renan/ADM está selecionado
+                     userSelect.value = foundUser; 
+                     checkIfPowerUser(); // ATUALIZADO
                      renderTable();
                  } else {
-                     // Usuário salvo não existe mais na lista (foi excluído), força o logout
                      logoutAndSwitchUser();
                  }
             } else {
                  // Lógica para novo acesso: exibe o modal
                  document.getElementById('authModal').style.display = 'flex';
-                 userSelect.value = users[0]; // Garante que "Selecione..." esteja selecionado
+                 userSelect.value = users[0]; 
             }
             
             // Liga os botões
             document.getElementById('authButton').onclick = authenticateUser; 
             document.getElementById('logoutButton').onclick = logoutAndSwitchUser;
+            
+            // Liga o dropdown de Torres
+            document.getElementById('torreSelect').onchange = (e) => {
+                populateFrenteSelect(e.target.value);
+            };
         };
     </script>
 </body>
