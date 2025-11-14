@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Automatização - Gestão de Torres e Frentes</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        /* Estilos Base (MESMO CSS DO OUTRO ARQUIVO) */
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 30px; 
+            background-color: #e9eef2;
+        }
+        .container { 
+            max-width: 900px; /* Um pouco menor para gestão */
+            margin: 0 auto; 
+            background-color: white; 
+            padding: 40px; 
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            border-top: 5px solid #0070d2;
+            position: relative; 
+        }
+        
+        h1 { color: #1a1a1a; font-size: 2.2em; margin-bottom: 5px; text-align: center; }
+        h2 { color: #6a6a6a; font-size: 1.2em; font-weight: 300; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; margin-top: 0; margin-bottom: 30px; text-align: center; }
+        .tool-section { min-height: 200px; padding: 10px; }
+
+        /* Estilos específicos da Gestão */
+        .management-form {
+            display: grid;
+            grid-template-columns: 3fr 1fr;
+            gap: 15px;
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #d0d0d0;
+            border-radius: 8px;
+            background-color: #f5f5f5;
+        }
+        .management-form input[type="text"],
+        .management-form select {
+            padding: 10px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box;
+            background-color: white; /* Garante fundo branco para select */
+        }
+        .management-form button {
+            padding: 10px; background-color: #0070d2; color: white; border: none; border-radius: 4px;
+            cursor: pointer; transition: background-color 0.2s;
+            height: 40px; /* Altura fixa */
+            align-self: end;
+        }
+        .management-form button:hover { background-color: #005aa3; }
+
+        /* Link para voltar */
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #0070d2;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.1em;
+        }
+        .back-link:hover { text-decoration: underline; }
+        #adminMessage {
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 15px;
+            height: 1.2em; /* Evita que o layout pule */
+        }
+
+        /* Estilo dos Cards das Torres */
+        .torre-card {
+            border: 1px solid #d0d0d0;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            background-color: #fdfdfd;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .torre-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px; /* Espaçamento */
+            padding: 15px 20px;
+            background-color: #f5f5f5;
+            border-bottom: 1px solid #e0e0e0;
+            border-radius: 8px 8px 0 0;
+        }
+        .torre-header-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap; /* Permite quebra de linha em telas pequenas */
+        }
+        .torre-header-info span {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #0070d2;
+        }
+        /* ATUALIZAÇÃO: Select de líder da TORRE */
+        .torre-lider-select {
+            font-weight: 600;
+            color: #1a1a1a;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 0.9em;
+            padding: 4px;
+        }
+
+        .delete-btn {
+            background: none; border: 1px solid #c53929; color: #c53929;
+            padding: 5px 10px; border-radius: 4px; cursor: pointer;
+            font-size: 0.9em; font-weight: 600;
+            transition: background-color 0.2s, color 0.2s;
+            white-space: nowrap; /* Evita quebra de linha */
+        }
+        .delete-btn:hover { background-color: #c53929; color: white; }
+
+        /* Lista de Frentes */
+        .frente-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .frente-list li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 20px;
+            border-bottom: 1px solid #e9e9e9;
+        }
+        .frente-list li:last-child {
+            border-bottom: none;
+        }
+        .frente-list li span {
+            font-weight: 500;
+            word-break: break-word; /* Quebra nomes longos de frente */
+            padding-right: 10px;
+        }
+        /* REMOVIDO: O select de líder individual */
+        .frente-list li span .lider {
+            font-weight: 400;
+            color: #6a6a6a;
+            font-style: italic;
+        }
+        
+        /* Formulário de Adicionar Frente (dentro do card) */
+        .frente-form {
+            display: grid;
+            /* O select de líder foi removido daqui */
+            grid-template-columns: 1fr 100px; 
+            gap: 10px;
+            padding: 15px 20px;
+            background-color: #f5f5f5;
+            border-top: 1px solid #e0e0e0;
+            border-radius: 0 0 8px 8px;
+        }
+         .frente-form input, .frente-form select {
+            padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box;
+         }
+         .frente-form button {
+            padding: 8px; background-color: #28a745; color: white; border: none; border-radius: 4px;
+            cursor: pointer; transition: background-color 0.2s;
+            font-weight: 600;
+         }
+         .frente-form button:hover { background-color: #218838; }
+         
+         @media (max-width: 600px) {
+            .frente-form {
+                grid-template-columns: 1fr; /* Empilha em telas pequenas */
+            }
+         }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Gestão de Torres e Frentes</h1>
+        <h2>Adicione torres, frentes e líderes responsáveis</h2>
+        
+        <div class="tool-section">
+            
+            <!-- LINK PARA VOLTAR PARA A PÁGINA PRINCIPAL -->
+            <a href="index.html" class="back-link">&larr; Voltar para Solicitações</a>
+            
+            <h3>Adicionar Nova Torre</h3>
+            <div class="management-form">
+                <input type="text" id="newTorreName" placeholder="Nome da Nova Torre (Ex: Atendimento)" required>
+                <button id="addTorreButton">Adicionar Torre</button>
+            </div>
+            
+            <div id="adminMessage" style="color: red;"></div>
+
+            <h3>Torres e Frentes Atuais</h3>
+            <div id="torresListContainer">
+                <!-- As torres e frentes serão renderizadas aqui pelo JS -->
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // CHAVES COMPARTILHADAS (IDÊNTICAS AO index.html)
+        const USER_STORAGE_KEY = 'automationUserList'; 
+        const TORRE_STORAGE_KEY = 'automationTowersList'; // Nova chave para torres
+        
+        // Dados Iniciais das Torres (conforme sua lista)
+        const DEFAULT_TORRES_DATA = [
+            {
+                id: 1678886400001, // ID Fixo
+                nome: "Delta",
+                liderPadrao: "Vinicius", // <-- LÍDER PADRÃO
+                frentes: [
+                    { id: 101, nome: "ProSula", lider: "Vinicius" },
+                    { id: 102, nome: "Relacionamento (Gestão de Leads, Transf, Com e Rex)", lider: "Vinicius" },
+                    { id: 103, nome: "Cadastro Prestador/Reembolso", lider: "Vinicius" },
+                    { id: 104, nome: "Contas Médicas", lider: "Vinicius" }
+                ]
+            },
+            {
+                id: 1678886400002,
+                nome: "Sigma",
+                liderPadrao: "Diego", // <-- LÍDER PADRÃO
+                frentes: [
+                    { id: 201, nome: "Auditoria/Fraude", lider: "Diego" },
+                    { id: 202, nome: "CSP", lider: "Diego" },
+                    { id: 203, nome: "Sourcing", lider: "Diego" }
+                ]
+            },
+            {
+                id: 1678886400003,
+                nome: "Gama",
+                liderPadrao: "Matheus", // <-- LÍDER PADRÃO
+                frentes: [
+                    { id: 301, nome: "Cotador/Multicanalidade (Comercial)", lider: "Matheus" },
+                    { id: 302, nome: "VPP", lider: "A definir" },
+                    { id: 303, nome: "Health Cloud", lider: "Matheus" },
+                    { id: 304, nome: "Marketing", lider: "Matheus" }
+                ]
+            }
+        ];
+
+        // --- FUNÇÕES DE DADOS (localStorage) ---
+
+        // Carrega a lista de usuários (para o dropdown de Líder)
+        function loadUserList() {
+            let users = localStorage.getItem(USER_STORAGE_KEY);
+            if (!users) {
+                return []; 
+            }
+            // Filtra o "Selecione seu Nome..." e "ADM" (ADM não deve ser líder de frente)
+            return JSON.parse(users).filter(u => 
+                u.toUpperCase() !== 'SELECIONE SEU NOME...' &&
+                u.toUpperCase() !== 'ADM'
+            ).sort(); // Ordena alfabeticamente
+        }
+
+        // Carrega a lista de Torres
+        function loadTowers() {
+            let towers = localStorage.getItem(TORRE_STORAGE_KEY);
+            if (!towers) {
+                // Se não existir, PREENCHE com os dados padrão
+                saveTowers(DEFAULT_TORRES_DATA);
+                return DEFAULT_TORRES_DATA; 
+            }
+            return JSON.parse(towers);
+        }
+
+        // Salva a lista de Torres
+        function saveTowers(towers) {
+            localStorage.setItem(TORRE_STORAGE_KEY, JSON.stringify(towers));
+        }
+        
+        // Formata o nome (para Nomes de Torre e Líderes)
+        function formatName(name) {
+            if (!name) return '';
+            let cleanedName = name.trim().toLowerCase();
+            return cleanedName.split(' ').map(word => {
+                if (word.length === 0) return '';
+                // Não capitaliza palavras curtas como 'de', 'e' (exceto se for a primeira)
+                if (word.length > 2 || word === cleanedName.split(' ')[0]) {
+                    return word.charAt(0).toUpperCase() + word.slice(1);
+                }
+                return word;
+            }).join(' ');
+        }
+        
+        // Formata o nome da Frente (permite caracteres especiais)
+        function formatFrenteName(name) {
+             if (!name) return '';
+             let cleanedName = name.trim(); // Mantém maiúsculas/minúsculas como digitado
+             if (cleanedName.length === 0) return '';
+             // Apenas capitaliza a primeira letra
+             return cleanedName.charAt(0).toUpperCase() + cleanedName.slice(1);
+        }
+
+        
+        // --- FUNÇÕES DE RENDERIZAÇÃO ---
+
+        // Renderiza todas as torres e suas frentes
+        function renderTorres() {
+            const container = document.getElementById('torresListContainer');
+            const towers = loadTowers();
+            const users = loadUserList(); // Pega a lista de usuários para os dropdowns
+            
+            container.innerHTML = ''; // Limpa a lista
+            
+            if (towers.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #6a6a6a;">Nenhuma torre cadastrada ainda.</p>';
+                return;
+            }
+
+            towers.forEach(torre => {
+                const torreCard = document.createElement('div');
+                torreCard.className = 'torre-card';
+
+                // 1. Header da Torre (Nome + *NOVO* Select de Líder + Botão Excluir)
+                const torreHeader = document.createElement('div');
+                torreHeader.className = 'torre-header';
+                
+                const torreInfo = document.createElement('div');
+                torreInfo.className = 'torre-header-info';
+
+                const torreNameSpan = document.createElement('span');
+                torreNameSpan.textContent = torre.nome;
+                
+                // --- ATUALIZAÇÃO AQUI: Select de Líder da TORRE ---
+                const liderSelect = document.createElement('select');
+                liderSelect.className = 'torre-lider-select';
+                
+                // Popula o select com todos os usuários
+                users.forEach(user => {
+                    const option = document.createElement('option');
+                    option.value = user;
+                    option.textContent = user;
+                    if (formatName(user) === formatName(torre.liderPadrao)) {
+                        option.selected = true; // Pré-seleciona o líder atual
+                    }
+                    liderSelect.appendChild(option);
+                });
+                
+                // Adiciona a opção "A definir"
+                const aDefinirOption = document.createElement('option');
+                aDefinirOption.value = "A definir";
+                aDefinirOption.textContent = "A definir";
+                if (torre.liderPadrao === "A definir") {
+                    aDefinirOption.selected = true;
+                }
+                liderSelect.appendChild(aDefinirOption);
+
+                // Evento que ATUALIZA O LÍDER DE TUDO
+                liderSelect.onchange = (e) => {
+                    updateLiderTorre(torre.id, e.target.value);
+                };
+                
+                torreInfo.appendChild(torreNameSpan);
+                torreInfo.appendChild(liderSelect); // Adiciona o select no header
+
+                const deleteTorreBtn = document.createElement('button');
+                deleteTorreBtn.textContent = 'Excluir Torre';
+                deleteTorreBtn.className = 'delete-btn';
+                deleteTorreBtn.onclick = () => deleteTorre(torre.id);
+
+                torreHeader.appendChild(torreInfo);
+                torreHeader.appendChild(deleteTorreBtn);
+                torreCard.appendChild(torreHeader);
+
+                // 2. Lista de Frentes
+                const frenteList = document.createElement('ul');
+                frenteList.className = 'frente-list';
+
+                if (torre.frentes.length === 0) {
+                    const li = document.createElement('li');
+                    li.textContent = 'Nenhuma frente cadastrada nesta torre.';
+                    li.style.color = '#9e9e9e';
+                    frenteList.appendChild(li);
+                } else {
+                    torre.frentes.forEach(frente => {
+                        const li = document.createElement('li');
+                        
+                        // --- ATUALIZAÇÃO AQUI ---
+                        // Mostra apenas o nome da frente. O líder é o da torre.
+                        const infoSpan = document.createElement('span');
+                        infoSpan.innerHTML = `${frente.nome}`;
+                        
+                        li.appendChild(infoSpan);
+                        // --- FIM DA ATUALIZAÇÃO ---
+                        
+                        const deleteFrenteBtn = document.createElement('button');
+                        deleteFrenteBtn.textContent = 'Excluir';
+                        deleteFrenteBtn.className = 'delete-btn';
+                        deleteFrenteBtn.style.fontSize = '0.8em';
+                        deleteFrenteBtn.onclick = () => deleteFrente(torre.id, frente.id);
+                        
+                        li.appendChild(deleteFrenteBtn);
+                        frenteList.appendChild(li);
+                    });
+                }
+                torreCard.appendChild(frenteList);
+
+                // 3. Formulário para Adicionar Frente
+                const frenteForm = document.createElement('div');
+                frenteForm.className = 'frente-form';
+                
+                const frenteNameInput = document.createElement('input');
+                frenteNameInput.type = 'text';
+                frenteNameInput.placeholder = 'Nome da Nova Frente';
+                frenteNameInput.id = `frente-nome-${torre.id}`; // ID único
+                
+                // --- ATUALIZAÇÃO: O select de líder foi REMOVIDO do form ---
+                
+                const addFrenteBtn = document.createElement('button');
+                addFrenteBtn.textContent = 'Adicionar';
+                addFrenteBtn.onclick = () => {
+                    // Adiciona a frente, o líder será automaticamente o da torre
+                    addFrente(torre.id, frenteNameInput.value);
+                };
+
+                frenteForm.appendChild(frenteNameInput);
+                // frenteForm.appendChild(liderSelect); // Removido
+                frenteForm.appendChild(addFrenteBtn);
+                torreCard.appendChild(frenteForm);
+
+                // Adiciona o card da torre ao container
+                container.appendChild(torreCard);
+            });
+        }
+        
+        // --- FUNÇÕES DE CRUD (Torres e Frentes) ---
+
+        function showMessage(text, color = 'red') {
+            const messageDiv = document.getElementById('adminMessage');
+            messageDiv.style.color = color;
+            messageDiv.textContent = text;
+            
+            setTimeout(() => {
+                if (messageDiv.textContent === text) {
+                    messageDiv.textContent = '';
+                }
+            }, 3000);
+        }
+
+        // Adiciona uma nova TORRE
+        function addTorre() {
+            const input = document.getElementById('newTorreName');
+            const torreName = formatName(input.value); 
+            
+            if (!torreName || torreName.length < 3) {
+                showMessage('O nome da torre deve ter pelo menos 3 caracteres.');
+                return;
+            }
+            
+            const towers = loadTowers();
+            const torreExists = towers.some(t => formatName(t.nome) === torreName); 
+            
+            if (torreExists) {
+                showMessage(`A torre "${torreName}" já existe.`);
+                return;
+            }
+            
+            towers.push({
+                id: Date.now(),
+                nome: torreName,
+                liderPadrao: "A definir", // Novo líder padrão
+                frentes: [] 
+            });
+            
+            saveTowers(towers);
+            renderTorres(); 
+            
+            showMessage(`Torre "${torreName}" adicionada com sucesso!`, 'green');
+            input.value = '';
+        }
+        
+        // Deleta uma TORRE
+        function deleteTorre(torreId) {
+            if (window.confirm('Tem certeza que deseja excluir esta torre e TODAS as suas frentes?')) {
+                let towers = loadTowers();
+                towers = towers.filter(t => t.id !== torreId);
+                saveTowers(towers);
+                renderTorres();
+                showMessage('Torre excluída com sucesso.', 'green');
+            }
+        }
+
+        // Adiciona uma FRENTE a uma torre específica
+        function addFrente(torreId, frenteName) {
+            frenteName = formatFrenteName(frenteName); // Formata nome da frente
+
+            if (!frenteName) {
+                showMessage('O nome da frente é obrigatório.');
+                return;
+            }
+
+            const towers = loadTowers();
+            const torre = towers.find(t => t.id === torreId);
+            
+            if (!torre) {
+                 showMessage('Erro: Torre não encontrada.');
+                 return;
+            }
+            
+            // O líder da nova frente é o líder padrão da torre
+            const liderName = torre.liderPadrao; 
+
+            const frenteExists = torre.frentes.some(f => f.nome.toLowerCase() === frenteName.toLowerCase());
+            if (frenteExists) {
+                showMessage(`A frente "${frenteName}" já existe nesta torre.`);
+                return;
+            }
+            
+            torre.frentes.push({
+                id: Date.now(), 
+                nome: frenteName, 
+                lider: formatName(liderName) // Salva o líder padrão
+            });
+            
+            saveTowers(towers);
+            renderTorres(); 
+        }
+        
+        // Deleta uma FRENTE
+        function deleteFrente(torreId, frenteId) {
+            if (window.confirm('Tem certeza que deseja excluir esta frente?')) {
+                const towers = loadTowers();
+                const torre = towers.find(t => t.id === torreId);
+                
+                if (torre) {
+                    torre.frentes = torre.frentes.filter(f => f.id !== frenteId);
+                    saveTowers(towers);
+                    renderTorres();
+                }
+            }
+        }
+        
+        // --- ATUALIZAÇÃO: Nova Função ---
+        // Atualiza o líder padrão da TORRE e todas as suas FRENTES
+        function updateLiderTorre(torreId, novoLider) {
+            const towers = loadTowers();
+            const torre = towers.find(t => t.id === torreId);
+            if (!torre) return;
+            
+            const liderFormatado = formatName(novoLider);
+            
+            // 1. Atualiza o líder padrão da torre
+            torre.liderPadrao = liderFormatado;
+            
+            // 2. Atualiza o líder de TODAS as frentes desta torre
+            torre.frentes.forEach(frente => {
+                frente.lider = liderFormatado;
+            });
+            
+            saveTowers(towers);
+            
+            showMessage(`Líder da torre "${torre.nome}" e todas as suas frentes atualizado para "${liderFormatado}".`, 'green');
+            
+            // Re-renderiza tudo para mostrar as mudanças
+            renderTorres(); 
+        }
+
+        // Inicialização da página
+        window.onload = () => {
+            renderTorres();
+            document.getElementById('addTorreButton').onclick = addTorre;
+        };
+    </script>
+</body>
+</html>
