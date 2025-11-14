@@ -84,19 +84,37 @@
             background-color: #f5f5f5;
             border-bottom: 1px solid #e0e0e0;
             border-radius: 8px 8px 0 0;
+            flex-wrap: wrap; /* Quebra de linha em telas pequenas */
         }
         .torre-header-info {
             display: flex;
             align-items: center;
             gap: 10px;
-            flex-wrap: wrap; /* Permite quebra de linha em telas pequenas */
+            flex-wrap: wrap;
         }
+        
+        /* ATUALIZAÇÃO: NOME DA TORRE (EDITÁVEL PARA ADM) */
         .torre-header-info span {
             font-size: 1.3em;
             font-weight: 600;
             color: #0070d2;
+            padding: 4px 8px;
         }
-        /* ATUALIZAÇÃO: Select de líder da TORRE */
+        .torre-name-input {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #0070d2;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 4px 8px;
+            background-color: #ffffff;
+            max-width: 250px; /* Limita a largura do input */
+        }
+        .torre-name-input:focus {
+            outline: 2px solid #0070d2;
+            background-color: #f0faff;
+        }
+
         .torre-lider-select {
             font-weight: 600;
             color: #1a1a1a;
@@ -136,17 +154,10 @@
             word-break: break-word; /* Quebra nomes longos de frente */
             padding-right: 10px;
         }
-        /* REMOVIDO: O select de líder individual */
-        .frente-list li span .lider {
-            font-weight: 400;
-            color: #6a6a6a;
-            font-style: italic;
-        }
         
         /* Formulário de Adicionar Frente (dentro do card) */
         .frente-form {
             display: grid;
-            /* O select de líder foi removido daqui */
             grid-template-columns: 1fr 100px; 
             gap: 10px;
             padding: 15px 20px;
@@ -154,7 +165,7 @@
             border-top: 1px solid #e0e0e0;
             border-radius: 0 0 8px 8px;
         }
-         .frente-form input, .frente-form select {
+         .frente-form input {
             padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box;
          }
          .frente-form button {
@@ -180,7 +191,7 @@
         
         <div class="tool-section">
             
-            <!-- LINK PARA VOLTAR PARA A PÁGINA PRINCIPAL -->
+            <!-- ATUALIZADO: Link aponta para index.html -->
             <a href="index.html" class="back-link">&larr; Voltar para Solicitações</a>
             
             <h3>Adicionar Nova Torre</h3>
@@ -201,14 +212,19 @@
     <script>
         // CHAVES COMPARTILHADAS (IDÊNTICAS AO index.html)
         const USER_STORAGE_KEY = 'automationUserList'; 
-        const TORRE_STORAGE_KEY = 'automationTowersList'; // Nova chave para torres
+        const TORRE_STORAGE_KEY = 'automationTowersList'; 
+        const REQUEST_STORAGE_KEY = 'automationRequests'; // <-- CHAVE DAS SOLICITAÇÕES
         
-        // Dados Iniciais das Torres (conforme sua lista)
+        // --- ATUALIZAÇÃO DE PERMISSÃO ---
+        const AUTHORIZED_EDITORS = ['ADM'];
+        let IS_ADM = false; // Flag de permissão
+
+        
         const DEFAULT_TORRES_DATA = [
             {
-                id: 1678886400001, // ID Fixo
+                id: 1678886400001,
                 nome: "Delta",
-                liderPadrao: "Vinicius", // <-- LÍDER PADRÃO
+                liderPadrao: "Vinicius", 
                 frentes: [
                     { id: 101, nome: "ProSula", lider: "Vinicius" },
                     { id: 102, nome: "Relacionamento (Gestão de Leads, Transf, Com e Rex)", lider: "Vinicius" },
@@ -219,7 +235,7 @@
             {
                 id: 1678886400002,
                 nome: "Sigma",
-                liderPadrao: "Diego", // <-- LÍDER PADRÃO
+                liderPadrao: "Diego", 
                 frentes: [
                     { id: 201, nome: "Auditoria/Fraude", lider: "Diego" },
                     { id: 202, nome: "CSP", lider: "Diego" },
@@ -229,7 +245,7 @@
             {
                 id: 1678886400003,
                 nome: "Gama",
-                liderPadrao: "Matheus", // <-- LÍDER PADRÃO
+                liderPadrao: "Matheus", 
                 frentes: [
                     { id: 301, nome: "Cotador/Multicanalidade (Comercial)", lider: "Matheus" },
                     { id: 302, nome: "VPP", lider: "A definir" },
@@ -241,42 +257,43 @@
 
         // --- FUNÇÕES DE DADOS (localStorage) ---
 
-        // Carrega a lista de usuários (para o dropdown de Líder)
         function loadUserList() {
             let users = localStorage.getItem(USER_STORAGE_KEY);
-            if (!users) {
-                return []; 
-            }
-            // Filtra o "Selecione seu Nome..." e "ADM" (ADM não deve ser líder de frente)
+            if (!users) return []; 
             return JSON.parse(users).filter(u => 
                 u.toUpperCase() !== 'SELECIONE SEU NOME...' &&
                 u.toUpperCase() !== 'ADM'
-            ).sort(); // Ordena alfabeticamente
+            ).sort(); 
         }
 
-        // Carrega a lista de Torres
         function loadTowers() {
             let towers = localStorage.getItem(TORRE_STORAGE_KEY);
             if (!towers) {
-                // Se não existir, PREENCHE com os dados padrão
                 saveTowers(DEFAULT_TORRES_DATA);
                 return DEFAULT_TORRES_DATA; 
             }
             return JSON.parse(towers);
         }
 
-        // Salva a lista de Torres
         function saveTowers(towers) {
             localStorage.setItem(TORRE_STORAGE_KEY, JSON.stringify(towers));
         }
         
-        // Formata o nome (para Nomes de Torre e Líderes)
+        // --- ATUALIZAÇÃO: Carrega as solicitações (para atualizar nomes) ---
+        function loadRequests() {
+            let requests = localStorage.getItem(REQUEST_STORAGE_KEY);
+            return requests ? JSON.parse(requests) : [];
+        }
+        
+        function saveRequests(requests) {
+             localStorage.setItem(REQUEST_STORAGE_KEY, JSON.stringify(requests));
+        }
+        
         function formatName(name) {
             if (!name) return '';
             let cleanedName = name.trim().toLowerCase();
             return cleanedName.split(' ').map(word => {
                 if (word.length === 0) return '';
-                // Não capitaliza palavras curtas como 'de', 'e' (exceto se for a primeira)
                 if (word.length > 2 || word === cleanedName.split(' ')[0]) {
                     return word.charAt(0).toUpperCase() + word.slice(1);
                 }
@@ -284,25 +301,39 @@
             }).join(' ');
         }
         
-        // Formata o nome da Frente (permite caracteres especiais)
         function formatFrenteName(name) {
              if (!name) return '';
-             let cleanedName = name.trim(); // Mantém maiúsculas/minúsculas como digitado
+             let cleanedName = name.trim();
              if (cleanedName.length === 0) return '';
-             // Apenas capitaliza a primeira letra
              return cleanedName.charAt(0).toUpperCase() + cleanedName.slice(1);
         }
+        
+        // --- ATUALIZAÇÃO: Funções de Login (só para checar ADM) ---
+        function isAuthorized(user) {
+            if (!user) return false;
+            const cleanUser = formatName(user).toUpperCase().trim(); 
+            return AUTHORIZED_EDITORS.includes(cleanUser); // Apenas 'ADM'
+        }
+        
+        function checkLogin() {
+            const lastUser = localStorage.getItem('lastUser');
+            if (lastUser && isAuthorized(lastUser)) {
+                IS_ADM = true;
+            } else {
+                IS_ADM = false;
+            }
+        }
+        
 
         
         // --- FUNÇÕES DE RENDERIZAÇÃO ---
 
-        // Renderiza todas as torres e suas frentes
         function renderTorres() {
             const container = document.getElementById('torresListContainer');
             const towers = loadTowers();
-            const users = loadUserList(); // Pega a lista de usuários para os dropdowns
+            const users = loadUserList(); 
             
-            container.innerHTML = ''; // Limpa a lista
+            container.innerHTML = ''; 
             
             if (towers.length === 0) {
                 container.innerHTML = '<p style="text-align: center; color: #6a6a6a;">Nenhuma torre cadastrada ainda.</p>';
@@ -313,32 +344,47 @@
                 const torreCard = document.createElement('div');
                 torreCard.className = 'torre-card';
 
-                // 1. Header da Torre (Nome + *NOVO* Select de Líder + Botão Excluir)
+                // 1. Header da Torre
                 const torreHeader = document.createElement('div');
                 torreHeader.className = 'torre-header';
                 
                 const torreInfo = document.createElement('div');
                 torreInfo.className = 'torre-header-info';
-
-                const torreNameSpan = document.createElement('span');
-                torreNameSpan.textContent = torre.nome;
                 
-                // --- ATUALIZAÇÃO AQUI: Select de Líder da TORRE ---
+                // --- ATUALIZAÇÃO: NOME DA TORRE (Editável se ADM) ---
+                if (IS_ADM) {
+                    const torreNameInput = document.createElement('input');
+                    torreNameInput.type = 'text';
+                    torreNameInput.className = 'torre-name-input'; 
+                    torreNameInput.value = torre.nome;
+                    torreNameInput.onblur = (e) => {
+                        // Salva o nome antigo para atualizar as solicitações
+                        const nomeAntigo = torre.nome;
+                        updateTorreName(torre.id, e.target.value, nomeAntigo);
+                    };
+                    torreInfo.appendChild(torreNameInput);
+                } else {
+                    const torreNameSpan = document.createElement('span');
+                    torreNameSpan.textContent = torre.nome;
+                    torreInfo.appendChild(torreNameSpan);
+                }
+                // --- FIM DA ATUALIZAÇÃO ---
+
+                // Select de Líder da TORRE
                 const liderSelect = document.createElement('select');
                 liderSelect.className = 'torre-lider-select';
+                liderSelect.disabled = !IS_ADM; // Desabilitado se não for ADM
                 
-                // Popula o select com todos os usuários
                 users.forEach(user => {
                     const option = document.createElement('option');
                     option.value = user;
                     option.textContent = user;
                     if (formatName(user) === formatName(torre.liderPadrao)) {
-                        option.selected = true; // Pré-seleciona o líder atual
+                        option.selected = true;
                     }
                     liderSelect.appendChild(option);
                 });
                 
-                // Adiciona a opção "A definir"
                 const aDefinirOption = document.createElement('option');
                 aDefinirOption.value = "A definir";
                 aDefinirOption.textContent = "A definir";
@@ -347,17 +393,16 @@
                 }
                 liderSelect.appendChild(aDefinirOption);
 
-                // Evento que ATUALIZA O LÍDER DE TUDO
                 liderSelect.onchange = (e) => {
                     updateLiderTorre(torre.id, e.target.value);
                 };
                 
-                torreInfo.appendChild(torreNameSpan);
-                torreInfo.appendChild(liderSelect); // Adiciona o select no header
+                torreInfo.appendChild(liderSelect); 
 
                 const deleteTorreBtn = document.createElement('button');
                 deleteTorreBtn.textContent = 'Excluir Torre';
                 deleteTorreBtn.className = 'delete-btn';
+                deleteTorreBtn.disabled = !IS_ADM; // Desabilitado se não for ADM
                 deleteTorreBtn.onclick = () => deleteTorre(torre.id);
 
                 torreHeader.appendChild(torreInfo);
@@ -377,18 +422,16 @@
                     torre.frentes.forEach(frente => {
                         const li = document.createElement('li');
                         
-                        // --- ATUALIZAÇÃO AQUI ---
-                        // Mostra apenas o nome da frente. O líder é o da torre.
                         const infoSpan = document.createElement('span');
                         infoSpan.innerHTML = `${frente.nome}`;
                         
                         li.appendChild(infoSpan);
-                        // --- FIM DA ATUALIZAÇÃO ---
                         
                         const deleteFrenteBtn = document.createElement('button');
                         deleteFrenteBtn.textContent = 'Excluir';
                         deleteFrenteBtn.className = 'delete-btn';
                         deleteFrenteBtn.style.fontSize = '0.8em';
+                        deleteFrenteBtn.disabled = !IS_ADM; // Desabilitado se não for ADM
                         deleteFrenteBtn.onclick = () => deleteFrente(torre.id, frente.id);
                         
                         li.appendChild(deleteFrenteBtn);
@@ -397,30 +440,27 @@
                 }
                 torreCard.appendChild(frenteList);
 
-                // 3. Formulário para Adicionar Frente
-                const frenteForm = document.createElement('div');
-                frenteForm.className = 'frente-form';
-                
-                const frenteNameInput = document.createElement('input');
-                frenteNameInput.type = 'text';
-                frenteNameInput.placeholder = 'Nome da Nova Frente';
-                frenteNameInput.id = `frente-nome-${torre.id}`; // ID único
-                
-                // --- ATUALIZAÇÃO: O select de líder foi REMOVIDO do form ---
-                
-                const addFrenteBtn = document.createElement('button');
-                addFrenteBtn.textContent = 'Adicionar';
-                addFrenteBtn.onclick = () => {
-                    // Adiciona a frente, o líder será automaticamente o da torre
-                    addFrente(torre.id, frenteNameInput.value);
-                };
+                // 3. Formulário para Adicionar Frente (SÓ APARECE PARA ADM)
+                if (IS_ADM) {
+                    const frenteForm = document.createElement('div');
+                    frenteForm.className = 'frente-form';
+                    
+                    const frenteNameInput = document.createElement('input');
+                    frenteNameInput.type = 'text';
+                    frenteNameInput.placeholder = 'Nome da Nova Frente';
+                    frenteNameInput.id = `frente-nome-${torre.id}`; 
+                    
+                    const addFrenteBtn = document.createElement('button');
+                    addFrenteBtn.textContent = 'Adicionar';
+                    addFrenteBtn.onclick = () => {
+                        addFrente(torre.id, frenteNameInput.value);
+                    };
 
-                frenteForm.appendChild(frenteNameInput);
-                // frenteForm.appendChild(liderSelect); // Removido
-                frenteForm.appendChild(addFrenteBtn);
-                torreCard.appendChild(frenteForm);
+                    frenteForm.appendChild(frenteNameInput);
+                    frenteForm.appendChild(addFrenteBtn);
+                    torreCard.appendChild(frenteForm);
+                }
 
-                // Adiciona o card da torre ao container
                 container.appendChild(torreCard);
             });
         }
@@ -441,6 +481,7 @@
 
         // Adiciona uma nova TORRE
         function addTorre() {
+            if (!IS_ADM) return; // Segurança
             const input = document.getElementById('newTorreName');
             const torreName = formatName(input.value); 
             
@@ -460,7 +501,7 @@
             towers.push({
                 id: Date.now(),
                 nome: torreName,
-                liderPadrao: "A definir", // Novo líder padrão
+                liderPadrao: "A definir", 
                 frentes: [] 
             });
             
@@ -473,6 +514,7 @@
         
         // Deleta uma TORRE
         function deleteTorre(torreId) {
+            if (!IS_ADM) return;
             if (window.confirm('Tem certeza que deseja excluir esta torre e TODAS as suas frentes?')) {
                 let towers = loadTowers();
                 towers = towers.filter(t => t.id !== torreId);
@@ -484,7 +526,8 @@
 
         // Adiciona uma FRENTE a uma torre específica
         function addFrente(torreId, frenteName) {
-            frenteName = formatFrenteName(frenteName); // Formata nome da frente
+            if (!IS_ADM) return;
+            frenteName = formatFrenteName(frenteName); 
 
             if (!frenteName) {
                 showMessage('O nome da frente é obrigatório.');
@@ -499,7 +542,6 @@
                  return;
             }
             
-            // O líder da nova frente é o líder padrão da torre
             const liderName = torre.liderPadrao; 
 
             const frenteExists = torre.frentes.some(f => f.nome.toLowerCase() === frenteName.toLowerCase());
@@ -511,7 +553,7 @@
             torre.frentes.push({
                 id: Date.now(), 
                 nome: frenteName, 
-                lider: formatName(liderName) // Salva o líder padrão
+                lider: formatName(liderName) 
             });
             
             saveTowers(towers);
@@ -520,6 +562,7 @@
         
         // Deleta uma FRENTE
         function deleteFrente(torreId, frenteId) {
+            if (!IS_ADM) return;
             if (window.confirm('Tem certeza que deseja excluir esta frente?')) {
                 const towers = loadTowers();
                 const torre = towers.find(t => t.id === torreId);
@@ -532,37 +575,90 @@
             }
         }
         
-        // --- ATUALIZAÇÃO: Nova Função ---
-        // Atualiza o líder padrão da TORRE e todas as suas FRENTES
+        // ATUALIZA O LÍDER da TORRE e de todas as FRENTES
         function updateLiderTorre(torreId, novoLider) {
+            if (!IS_ADM) return;
             const towers = loadTowers();
             const torre = towers.find(t => t.id === torreId);
             if (!torre) return;
             
             const liderFormatado = formatName(novoLider);
             
-            // 1. Atualiza o líder padrão da torre
             torre.liderPadrao = liderFormatado;
-            
-            // 2. Atualiza o líder de TODAS as frentes desta torre
             torre.frentes.forEach(frente => {
                 frente.lider = liderFormatado;
             });
             
             saveTowers(towers);
             
-            showMessage(`Líder da torre "${torre.nome}" e todas as suas frentes atualizado para "${liderFormatado}".`, 'green');
+            showMessage(`Líder da torre "${torre.nome}" atualizado para "${liderFormatado}".`, 'green');
             
-            // Re-renderiza tudo para mostrar as mudanças
+            // Re-renderiza para mostrar os líderes atualizados nas frentes (se estivéssemos mostrando eles)
             renderTorres(); 
         }
+        
+        // --- ATUALIZAÇÃO: Renomeia a TORRE ---
+        function updateTorreName(torreId, novoNome, nomeAntigo) {
+             if (!IS_ADM) return;
+             novoNome = formatName(novoNome);
+             nomeAntigo = formatName(nomeAntigo);
+             
+             if (novoNome === nomeAntigo) return; // Nenhum
+             
+             if (!novoNome || novoNome.length < 3) {
+                showMessage('O nome da torre deve ter pelo menos 3 caracteres.');
+                renderTorres(); // Reverte
+                return;
+            }
+            
+            const towers = loadTowers();
+            const torre = towers.find(t => t.id === torreId);
+            if (!torre) return;
+            
+            const nomeExiste = towers.some(t => t.id !== torreId && formatName(t.nome) === novoNome);
+            if (nomeExiste) {
+                showMessage(`O nome "${novoNome}" já está em uso por outra torre.`);
+                renderTorres(); // Reverte
+                return;
+            }
+            
+            // 1. Atualiza o nome na lista de torres
+            torre.nome = novoNome;
+            saveTowers(towers);
+            
+            // 2. ATUALIZA O NOME EM TODAS AS SOLICITAÇÕES EXISTENTES (Reflete no index.html)
+            let requests = loadRequests();
+            requests.forEach(req => {
+                if (req.torreId === torreId) {
+                    // (O index.html fará a busca pelo ID, então não precisamos atualizar o nome aqui)
+                    // Mas se estivéssemos salvando o nome, faríamos a troca aqui.
+                    // A nova estrutura do index.html (próxima resposta) já cuida disso.
+                }
+            });
+            // saveRequests(requests); // (Não necessário se o index.html usar IDs)
+            
+            showMessage(`Nome da torre atualizado para "${novoNome}".`, 'green');
+            // Re-renderiza para garantir que o input tenha o nome formatado
+            renderTorres();
+        }
+
 
         // Inicialização da página
         window.onload = () => {
+            checkLogin(); // <-- VERIFICA A PERMISSÃO DE ADM
             renderTorres();
-            document.getElementById('addTorreButton').onclick = addTorre;
+            
+            // Só permite adicionar se for ADM
+            const addButton = document.getElementById('addTorreButton');
+            addButton.onclick = addTorre;
+            
+            if (!IS_ADM) {
+                document.getElementById('newTorreName').disabled = true;
+                addButton.disabled = true;
+                addButton.style.backgroundColor = '#9e9e9e';
+                addButton.style.cursor = 'not-allowed';
+            }
         };
     </script>
 </body>
-
 </html>
