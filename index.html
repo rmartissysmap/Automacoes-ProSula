@@ -19,11 +19,14 @@
             border-radius: 12px;
             box-shadow: 0 10px 25px rgba(0,0,0,0.1);
             border-top: 5px solid #0070d2;
-            position: relative; 
+            position: relative;
         }
-        h1 { color: #1a1a1a; font-size: 2.2em; margin-bottom: 5px; text-align: center; }
-        h2 { color: #6a6a6a; font-size: 1.2em; font-weight: 300; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; margin-top: 0; margin-bottom: 30px; text-align: center; }
-        .tool-section { min-height: 200px; padding: 10px; }
+        h1 { color: #1a1a1a; font-size: 2.2em; margin-bottom: 5px; text-align: center;
+        }
+        h2 { color: #6a6a6a; font-size: 1.2em; font-weight: 300; border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 10px; margin-top: 0; margin-bottom: 30px; text-align: center; }
+        .tool-section { min-height: 200px;
+            padding: 10px; }
 
         /* --- NOVO PAINEL DE USUÁRIO PROFISSIONAL --- */
         #userControl {
@@ -47,7 +50,8 @@
              cursor: default;
         }
         .user-icon {
-            width: 30px; height: 30px; background-color: #0070d2; color: white; border-radius: 50%;
+            width: 30px;
+            height: 30px; background-color: #0070d2; color: white; border-radius: 50%;
             display: flex; justify-content: center; align-items: center; font-size: 1em; margin-left: 10px;
         }
         .user-options {
@@ -61,15 +65,18 @@
         }
         /* Links de Gerenciamento */
         #userManagementLink, #towerManagementLink {
-            background: none; border: none;
+            background: none;
+            border: none;
             color: #0070d2;
             text-decoration: none;
             padding: 2px 0; cursor: pointer; 
             font-size: 0.9em; font-weight: 600;
-            display: none; /* Oculto por padrão, JS mostra para ADM */
+            display: none;
+            /* Oculto por padrão, JS mostra para ADM */
         }
         #logoutButton {
-            background: none; border: none;
+            background: none;
+            border: none;
             color: #c53929; /* Vermelho para Sair */
             text-decoration: none;
             padding: 2px 0; cursor: pointer; 
@@ -85,27 +92,32 @@
         .input-form {
             display: grid;
             /* Título | Torre | Frente | Botão */
-            grid-template-columns: 2fr 1fr 1fr auto; 
+            grid-template-columns: 2fr 1fr 1fr auto;
             gap: 15px;
             margin-bottom: 30px;
             padding: 20px;
             border: 1px solid #d0d0d0;
             border-radius: 8px;
             background-color: #f5f5f5;
-            align-items: end; /* Alinha os itens na base */
+            align-items: end;
+            /* Alinha os itens na base */
         }
         .input-form input[type="text"],
         .input-form select {
-            padding: 10px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box;
+            padding: 10px;
+            border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box;
             background-color: white;
-            height: 40px; /* Altura padrão */
+            height: 40px;
+            /* Altura padrão */
         }
         .input-form button {
-            padding: 10px; background-color: #0070d2; color: white; border: none; border-radius: 4px;
+            padding: 10px;
+            background-color: #0070d2; color: white; border: none; border-radius: 4px;
             cursor: pointer; transition: background-color 0.2s;
             height: 40px;
         }
-        .input-form button:hover { background-color: #005aa3; }
+        .input-form button:hover { background-color: #005aa3;
+        }
         .input-form div {
             display: flex;
             flex-direction: column;
@@ -119,47 +131,52 @@
 
         /* --- Tabela (COLUNAS AJUSTADAS) --- */
         #automationTable { 
-            width: 100%; 
+            width: 100%;
             border-collapse: collapse; 
             margin-top: 20px; 
             font-size: 0.9em; 
         }
         #automationTable th, #automationTable td { 
-            padding: 10px 8px; 
+            padding: 10px 8px;
             text-align: left; 
             border-bottom: 1px solid #e0e0e0; 
             vertical-align: middle;
-            word-wrap: break-word; 
+            word-wrap: break-word;
         } 
         #automationTable th { 
-            background-color: #0070d2; 
+            background-color: #0070d2;
             color: white; 
             font-weight: 600; 
             font-size: 1em; 
         }
-        #automationTable tr:nth-child(even) { background-color: #f9f9f9; }
+        #automationTable tr:nth-child(even) { background-color: #f9f9f9;
+        }
         
         /* --- NOVOS Ajustes de Largura das Colunas --- */
-        #automationTable th:nth-child(1), #automationTable td:nth-child(1) { width: 30%; } /* Título */
-        #automationTable th:nth-child(2), #automationTable td:nth-child(2) { width: 15%; } /* Solicitante */
-        #automationTable th:nth-child(4), #automationTable td:nth-child(4) { width: 20%; } /* Frente / Torre */
+        #automationTable th:nth-child(1), #automationTable td:nth-child(1) { width: 30%;
+        } /* Título */
+        #automationTable th:nth-child(2), #automationTable td:nth-child(2) { width: 15%;
+        } /* Solicitante */
+        #automationTable th:nth-child(4), #automationTable td:nth-child(4) { width: 20%;
+        } /* Frente / Torre */
 
         /* Colunas com conteúdo fixo (Status, Datas, Ações) usam PX para não espremer */
         #automationTable th:nth-child(3), #automationTable td:nth-child(3) { 
-            width: 120px; /* Status */
+            width: 120px;
+            /* Status */
             white-space: nowrap;
         }
         #automationTable th:nth-child(5), #automationTable td:nth-child(5), /* Criação */
         #automationTable th:nth-child(6), #automationTable td:nth-child(6), /* Conclusão */
         #automationTable th:nth-child(7), #automationTable td:nth-child(7) { /* Atualização */
-            width: 110px; 
+            width: 110px;
             white-space: nowrap;
         }
         #automationTable th:nth-child(8), #automationTable td:nth-child(8) { /* Link Arquivo */
-            width: 120px; 
+            width: 120px;
         } 
         #automationTable th:nth-child(9), #automationTable td:nth-child(9) { /* Ações */
-            width: 80px; 
+            width: 80px;
             text-align: center;
         } 
 
@@ -172,73 +189,97 @@
         
         /* --- ESTILOS DE STATUS --- */
         .status-select, .status-display { 
-            padding: 6px; border-radius: 4px; border: 1px solid #ccc; font-size: 0.9em; font-weight: bold;
+            padding: 6px;
+            border-radius: 4px; border: 1px solid #ccc; font-size: 0.9em; font-weight: bold;
             -webkit-appearance: none; -moz-appearance: none; appearance: none; cursor: default;
-            display: inline-block; box-sizing: border-box; width: 100%;
+            display: inline-block;
+            box-sizing: border-box; width: 100%;
         }
-        .status-select { cursor: pointer; } 
-        .status-display { border: none !important; }
+        .status-select { cursor: pointer;
+        } 
+        .status-display { border: none !important;
+        }
         
         /* Cores */
         .status-backlog { 
-            background-color: #f5f5f5 !important; color: #616161; border-color: #616161 !important;
+            background-color: #f5f5f5 !important;
+            color: #616161; border-color: #616161 !important;
         }
         .status-em-processo { 
-            background-color: #fff8e1 !important; color: #ffa000; border-color: #ffa000 !important;
+            background-color: #fff8e1 !important;
+            color: #ffa000; border-color: #ffa000 !important;
         }
         .status-finalizado { 
-            background-color: #E8F5E9 !important; color: #2E7D32; border-color: #2E7D32 !important; 
+            background-color: #E8F5E9 !important;
+            color: #2E7D32; border-color: #2E7D32 !important; 
         }
 
         /* Botões de Ação */
-        .action-btn { background: none; border: none; cursor: pointer; padding: 4px 6px; margin-right: 5px; font-size: 1em; color: #0070d2; transition: color 0.2s; }
-        .delete-btn { color: #c53929; }
-        .delete-btn:hover { color: #a32e22; }
+        .action-btn { background: none;
+            border: none; cursor: pointer; padding: 4px 6px; margin-right: 5px; font-size: 1em; color: #0070d2; transition: color 0.2s;
+        }
+        .delete-btn { color: #c53929;
+        }
+        .delete-btn:hover { color: #a32e22;
+        }
 
         /* Estilo para links (AJUSTADO) */
         .file-link-cell { 
-            white-space: nowrap; 
+            white-space: nowrap;
             overflow: hidden; 
             text-overflow: ellipsis; 
         }
         .file-link-cell a {
-            color: #0070d2; text-decoration: none; font-weight: bold; 
+            color: #0070d2;
+            text-decoration: none; font-weight: bold; 
         }
-        .file-link-cell a:hover { text-decoration: underline; }
+        .file-link-cell a:hover { text-decoration: underline;
+        }
 
         /* Modal de Autenticação */
         #authModal {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0, 0, 0, 0.6); display: flex;
-            justify-content: center; align-items: center; z-index: 1000;
+            justify-content: center; align-items: center;
+            z-index: 1000;
         }
         .modal-content {
-            background: white; padding: 30px; border-radius: 8px;
+            background: white;
+            padding: 30px; border-radius: 8px;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); text-align: center; min-width: 300px;
         }
         .modal-content select, .modal-content input, .modal-content button {
-            margin-top: 15px; padding: 10px; width: 100%;
+            margin-top: 15px;
+            padding: 10px; width: 100%;
             box-sizing: border-box; border-radius: 4px;
         }
         .modal-content select {
-             border: 1px solid #ccc; background-color: white;
+             border: 1px solid #ccc;
+             background-color: white;
              -webkit-appearance: menulist; -moz-appearance: menulist; appearance: menulist;
              cursor: pointer;
         }
-        .modal-content input { border: 1px solid #ccc; }
-        .modal-content button {
-            background-color: #0070d2; color: white; border: none; cursor: pointer;
+        .modal-content input { border: 1px solid #ccc;
         }
-        #mainContent { display: none; }
+        .modal-content button {
+            background-color: #0070d2;
+            color: white; border: none; cursor: pointer;
+        }
+        #mainContent { display: none;
+        }
         
         .editable-adm { /* Renomeado de editable-renan */
-            background-color: #f0faff; border: 1px solid #0070d2;
+            background-color: #f0faff;
+            border: 1px solid #0070d2;
         }
         .editable-adm[contenteditable="false"] {
-            background-color: transparent; border: none;
+            background-color: transparent;
+            border: none;
         }
         
-        #cpfInputGroup { display: none; }
+        #cpfInputGroup { display: none;
+        }
     </style>
 </head>
 <body>
@@ -250,13 +291,14 @@
             
             <select id="userNameSelect">
                 </select>
-            
+      
             <div id="cpfInputGroup">
                 <input type="password" id="cpfInput" placeholder="Digite a Senha de Acesso" required> 
             </div>
             
             <button id="authButton">Acessar</button>
             
+       
             <div id="message" style="color: red; margin-top: 15px;"></div>
         </div>
     </div>
@@ -267,6 +309,7 @@
             <div class="user-info">
                 <span id="userNameDisplay">Usuário</span>
                 <span class="user-icon" id="userInitial">U</span>
+       
             </div>
             <div class="user-options">
                 <a href="incluriexcluir.html" id="userManagementLink">Gerenciar Usuários</a>
@@ -275,6 +318,7 @@
             </div>
         </div>
 
+      
         <h1>Automatização</h1>
         <h2>Frente - Gestão de Solicitações</h2>
         
@@ -284,45 +328,54 @@
             <div class="input-form">
                 <div>
                     <label for="solicitacaoInput">Título da Automação</label>
+   
                     <input type="text" id="solicitacaoInput" placeholder="Título da Automação (Obrigatório)" required>
                 </div>
                 <div>
                     <label for="torreSelect">Torre</label>
                     <select id="torreSelect">
-                        <option value="">Selecione a Torre</option>
+  
+                       <option value="">Selecione a Torre</option>
                     </select>
                 </div>
                 <div>
                     <label for="frenteSelect">Frente</label>
-                    <select id="frenteSelect">
+  
+                   <select id="frenteSelect">
                         <option value="">Selecione a Torre Primeiro</option>
                     </select>
                 </div>
                 
+ 
                 <input type="hidden" id="solicitanteInput" readonly>
                 
                 <button onclick="addSolicitacao()">Adicionar</button>
             </div>
             
-            <div id="formMessage" style="color: red; margin-bottom: 10px; text-align: center; font-weight: bold;"></div>
+            <div id="formMessage" style="color: red;
+                margin-bottom: 10px; text-align: center; font-weight: bold;"></div>
 
             <h3>Acompanhamento de Solicitações</h3>
             <div style="overflow-x: auto;">
                 <table id="automationTable">
                     <thead>
                         <tr>
+      
                             <th>Título da Automação</th>
                             <th>Solicitante</th>
                             <th>Status</th>
+                    
                             <th>Frente / Torre</th> <th>Data Criação</th>
                             <th>Data Conclusão</th>
                             <th>Data Atualização</th>
                             <th>Link Arquivo</th> 
+ 
                             <th>Ações</th>
                         </tr>
                     </thead>
                     <tbody id="automationTableBody">
-                        </tbody>
+       
+                    </tbody>
                 </table>
             </div>
         </div>
@@ -332,28 +385,28 @@
         // Chaves para armazenamento local
         const REQUEST_STORAGE_KEY = 'automationRequests';
         const USER_STORAGE_KEY = 'automationUserList'; // CHAVE COMPARTILHADA
-        const TORRE_STORAGE_KEY = 'automationTowersList'; // NOVA CHAVE COMPARTILHADA
+        const TORRE_STORAGE_KEY = 'automationTowersList';
+        // NOVA CHAVE COMPARTILHADA
         
         const STATUSES = ['Backlog', 'Em Processo', 'Finalizado'];
-        
         // --- ATUALIZAÇÃO DE PERMISSÃO ---
         // Apenas 'ADM' é editor
-        const AUTHORIZED_EDITORS = ['ADM']; 
-        
+        const AUTHORIZED_EDITORS = ['ADM'];
         const DEFAULT_USERS = [
             'Selecione seu Nome...', 'Renan Martins', 'Vinicius', 'Matheus',
             'Diego', 'Renato', 'Lucas', 'Nedson', 'ADM'
         ];
-        
         const AUTHORIZED_PASSWORD = 'salmos93'; 
         let CURRENT_USER = ''; 
-        let ALL_TOWERS = []; // Armazena os dados das torres
+        let ALL_TOWERS = [];
+        // Armazena os dados das torres
 
         // --- DADOS INICIAIS DAS TORRES (PARA GARANTIR QUE O DROPDOWN FUNCIONE) ---
         const DEFAULT_TORRES_DATA = [
             {
                 id: 1678886400001, nome: "Delta", liderPadrao: "Vinicius",
                 frentes: [
+              
                     { id: 101, nome: "ProSula", lider: "Vinicius" },
                     { id: 102, nome: "Relacionamento (Gestão de Leads, Transf, Com e Rex)", lider: "Vinicius" },
                     { id: 103, nome: "Cadastro Prestador/Reembolso", lider: "Vinicius" },
@@ -363,23 +416,24 @@
             {
                 id: 1678886400002, nome: "Sigma", liderPadrao: "Diego",
                 frentes: [
+                   
                     { id: 201, nome: "Auditoria/Fraude", lider: "Diego" },
                     { id: 202, nome: "CSP", lider: "Diego" },
                     { id: 203, nome: "Sourcing", lider: "Diego" }
                 ]
             },
+          
             {
                 id: 1678886400003, nome: "Gama", liderPadrao: "Matheus",
                 frentes: [
                     { id: 301, nome: "Cotador/Multicanalidade (Comercial)", lider: "Matheus" },
                     { id: 302, nome: "VPP", lider: "A definir" },
+    
                     { id: 303, nome: "Health Cloud", lider: "Matheus" },
                     { id: 304, nome: "Marketing", lider: "Matheus" }
                 ]
             }
         ];
-
-
         // --- FUNÇÕES DE DADOS (localStorage) ---
         
         function loadUserList() {
@@ -412,9 +466,11 @@
                     { id: 10, title: 'CSP Query', solicitant: 'Diego', date: '2025-11-04T00:00:00.000Z', status: 'Finalizado', team: 'CSP', conclusionDate: '04/11/2025', updateDate: '04/11/2025', fileLink: 'https://exemplo.com/cspquery' },
                     { id: 11, title: 'Reset de Senha', solicitant: 'Diego', date: '2025-11-11T00:00:00.000Z', status: 'Finalizado', team: 'CSP', conclusionDate: '11/11/2025', updateDate: '11/11/2025', fileLink: 'https://exemplo.com/reset-senha' },
                     // Novos dados com IDs
-                    { id: 1, title: 'Concierge', solicitant: 'Vinicius', date: '2025-10-22T00:00:00.000Z', status: 'Finalizado', torreId: 1678886400001, frenteId: 101, conclusionDate: '22/10/2025', updateDate: '22/10/2025', fileLink: 'https://exemplo.com/concierge' },
-                    { id: 2, title: 'Integração', solicitant: 'Matheus', date: '2025-10-28T00:00:00.000Z', status: 'Finalizado', torreId: 1678886400003, frenteId: 301, conclusionDate: '28/10/2025', updateDate: '28/10/2025', fileLink: 'https://exemplo.com/integracao' },
-                    { id: 3, title: 'Paliativo', solicitant: 'Vinicius', date: new Date().toISOString(), status: 'Em Processo', torreId: 1678886400001, frenteId: 102, conclusionDate: '', updateDate: '', fileLink: '' }
+                   
+                    { id: 1, title: 'Concierge', solicitant: 'Vinicius', date: '2025-10-22T00:00:00.000Z', status: 'Finalizado', torreId: '1678886400001', frenteId: '101', conclusionDate: '22/10/2025', updateDate: '22/10/2025', fileLink: 'https://exemplo.com/concierge' },
+                    { id: 2, title: 'Integração', solicitant: 'Matheus', date: '2025-10-28T00:00:00.000Z', status: 'Finalizado', torreId: '1678886400003', frenteId: '301', conclusionDate: '28/10/2025', updateDate: '28/10/2025', fileLink: 'https://exemplo.com/integracao' },
+                    { id: 3, title: 'Paliativo', solicitant: 'Vinicius', date: new Date().toISOString(), status: 'Em Processo', torreId: '1678886400001', frenteId: '102', 
+                        conclusionDate: '', updateDate: '', fileLink: '' }
                 ];
                 saveRequests(initialData);
                 requests = JSON.stringify(initialData);
@@ -454,7 +510,6 @@
             const userName = userNameSelect.value.trim(); 
             const isPowerUser = isAuthorized(userName); // Só 'ADM' será true
             const cpfGroup = document.getElementById('cpfInputGroup');
-            
             if (isPowerUser) {
                 cpfGroup.style.display = 'block';
             } else {
@@ -474,9 +529,9 @@
             }
             messageDiv.textContent = '';
 
-            const isPowerUser = isAuthorized(userName); // True apenas para 'ADM'
-            const formattedUserName = formatName(userName); 
-
+            const isPowerUser = isAuthorized(userName);
+            // True apenas para 'ADM'
+            const formattedUserName = formatName(userName);
             if (isPowerUser) {
                 const passwordInput = document.getElementById('cpfInput').value.trim().toLowerCase();
                 if (passwordInput !== AUTHORIZED_PASSWORD) {
@@ -485,7 +540,7 @@
                 }
             }
 
-            CURRENT_USER = formattedUserName; 
+            CURRENT_USER = formattedUserName;
             localStorage.setItem('lastUser', CURRENT_USER); 
             
             document.getElementById('authModal').style.display = 'none';
@@ -504,7 +559,6 @@
             document.getElementById('mainContent').style.display = 'none';
             document.getElementById('userControl').style.display = 'none'; // Esconde o painel do usuário
             document.getElementById('authModal').style.display = 'flex';
-            
             populateUserSelect(); 
             const userSelect = document.getElementById('userNameSelect');
             userSelect.value = loadUserList()[0];
@@ -517,26 +571,30 @@
 
         // ATUALIZADO: Mostra links de gerenciamento SÓ PARA ADM
         function updateUserDisplay(userName) {
-            const formattedName = formatName(userName); 
+            const formattedName = formatName(userName);
             const initial = formattedName.trim().toUpperCase().charAt(0);
             document.getElementById('userNameDisplay').textContent = formattedName;
             document.getElementById('userInitial').textContent = initial;
             
-            const isAdm = isAuthorized(CURRENT_USER); // Apenas ADM
-            document.getElementById('userManagementLink').style.display = isAdm ? 'block' : 'none';
+            const isAdm = isAuthorized(CURRENT_USER);
+            // Apenas ADM
+            document.getElementById('userManagementLink').style.display = isAdm ?
+            'block' : 'none';
             document.getElementById('towerManagementLink').style.display = isAdm ? 'block' : 'none';
             
             document.getElementById('userControl').style.display = 'flex';
         }
 
         function canDelete(user, status) {
-            const isPowerUser = isAuthorized(user); // Apenas ADM
+            const isPowerUser = isAuthorized(user);
+            // Apenas ADM
             const cleanStatus = status.toUpperCase().trim();
-            
             if (cleanStatus === 'EM PROCESSO' || cleanStatus === 'FINALIZADO') {
-                return isPowerUser; // Só ADM deleta
+                return isPowerUser;
+            // Só ADM deleta
             }
-            return true; // Todos podem deletar Backlog
+            return true;
+            // Todos podem deletar Backlog
         }
 
         function formatDate(date) {
@@ -544,7 +602,7 @@
             if (!date) return '';
             const d = new Date(date);
             if (isNaN(d.getTime())) return ''; 
-            return d.toLocaleDateString('pt-BR'); 
+            return d.toLocaleDateString('pt-BR');
         }
         
         // --- Funções de Renderização da Tabela ---
@@ -552,11 +610,9 @@
         // ATUALIZAÇÃO: Função auxiliar para buscar nomes por IDs
         function getTorreFrenteNames(torreId, frenteId) {
             // Recarrega os dados das torres caso tenham sido atualizados em outra página
-            loadTowersData(); 
-            
+            loadTowersData();
             const torre = ALL_TOWERS.find(t => t.id == torreId);
             if (!torre) return "Torre Desconhecida";
-            
             const frente = torre.frentes.find(f => f.id == frenteId);
             if (!frente) return `${torre.nome} / Frente Desconhecida`;
             
@@ -568,10 +624,11 @@
             const tbody = document.getElementById('automationTableBody');
             tbody.innerHTML = '';
             const requests = loadRequests();
-            const canEditRestrictedFields = isAuthorized(CURRENT_USER); // Apenas ADM
+            const canEditRestrictedFields = isAuthorized(CURRENT_USER);
+            // Apenas ADM
 
             if (requests.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: #6a6a6a;">Nenhuma solicitação em andamento.</td></tr>'; 
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: #6a6a6a;">Nenhuma solicitação em andamento.</td></tr>';
                 return;
             }
 
@@ -580,11 +637,21 @@
                 tr.appendChild(createEditableCell(req.title, index, 'title', false));
                 tr.appendChild(createEditableCell(req.solicitant, index, 'solicitant', false)); 
                 tr.appendChild(createStatusCell(req, index, canEditRestrictedFields));
+        
                 
                 // ATUALIZAÇÃO: Usa o nome da torre/frente pelos IDs (ou usa o valor antigo se não tiver ID)
-                const teamName = req.torreId ? getTorreFrenteNames(req.torreId, req.frenteId) : req.team;
-                tr.appendChild(createReadOnlyCell(teamName || 'N/A')); 
+                let teamName;
+                if (req.torreId) {
+                    teamName = getTorreFrenteNames(req.torreId, req.frenteId);
+                } else if (req.team) {
+                    // Fallback para dados antigos (como 'CSP')
+                    teamName = req.team;
+                } else {
+                    teamName = 'N/A';
+                }
+                tr.appendChild(createReadOnlyCell(teamName)); 
                 
+ 
                 tr.appendChild(createReadOnlyCell(formatDate(req.date)));
 
                 const conclusionDateCell = createEditableCell(req.conclusionDate || '', index, 'conclusionDate', true); // Restrito
@@ -592,7 +659,9 @@
                 tr.appendChild(conclusionDateCell);
                 
                 tr.appendChild(createReadOnlyCell(formatDate(req.updateDate)));
-                tr.appendChild(createLinkFileCell(req, index, true)); // Restrito
+                
+                // CORREÇÃO: Passa o índice e a permissão correta para edição do link
+                tr.appendChild(createLinkFileCell(req, index)); 
 
                 const actionsCell = document.createElement('td');
                 if (canDelete(CURRENT_USER, req.status)) {
@@ -607,15 +676,18 @@
             });
         }
         
-        function createLinkFileCell(req, index, isRestricted) {
+        // CORREÇÃO APLICADA AQUI
+        function createLinkFileCell(req, index) {
             const cell = document.createElement('td');
             cell.className = 'file-link-cell';
             const canEdit = isAuthorized(CURRENT_USER); // APENAS ADM PODE EDITAR
-            const fileLink = req.fileLink ? req.fileLink.trim() : '';
+            const fileLink = req.fileLink ?
+                req.fileLink.trim() : '';
 
             if (canEdit) {
                  cell.className += ' editable-adm';
                  cell.setAttribute('contenteditable', 'true');
+                 // Usa o link real ou o placeholder para edição
                  cell.textContent = fileLink || 'Adicionar link...';
                  
                  cell.onblur = (e) => {
@@ -632,13 +704,16 @@
                  const fullUrl = fileLink.startsWith('http') ? fileLink : `http://${fileLink}`;
                  link.href = fullUrl;
                  link.target = '_blank'; 
-                 link.textContent = 'Acessar Link'; 
+                 link.textContent = 'Acessar Link';
                  link.title = fileLink; 
                  cell.appendChild(link);
             } else {
                  cell.textContent = '-';
             }
-            cell.setAttribute('contenteditable', 'false'); 
+            // Garante que para não-ADM ou em modo de link, não seja editável
+            if (!canEdit) {
+                cell.setAttribute('contenteditable', 'false'); 
+            }
             
             return cell;
         }
@@ -657,14 +732,13 @@
             
             // ATUALIZAÇÃO: Apenas ADM pode editar campos restritos
             const actualRestricted = isRestricted && !isAuthorized(CURRENT_USER);
-            
             cell.setAttribute('contenteditable', actualRestricted ? 'false' : 'true');
             
             if (!actualRestricted) {
                 cell.onblur = (e) => {
                     let newValue = e.target.textContent;
                     if (fieldName === 'solicitant') {
-                        newValue = formatName(newValue); 
+                        newValue = formatName(newValue);
                     }
                     updateRequest(index, fieldName, newValue);
                 }
@@ -684,6 +758,7 @@
                     option.value = status;
                     option.textContent = status;
                     if (req.status === status) option.selected = true;
+ 
                     select.appendChild(option);
                 });
                 select.onchange = (e) => {
@@ -709,10 +784,11 @@
             const formMessageDiv = document.getElementById('formMessage');
             
             const title = titleInput.value.trim();
-            const torreId = torreSelect.value; // Salva o ID
-            const frenteId = frenteSelect.value; // Salva o ID
-            const solicitant = CURRENT_USER; 
-
+            const torreId = torreSelect.value;
+            // Salva o ID
+            const frenteId = frenteSelect.value;
+            // Salva o ID
+            const solicitant = CURRENT_USER;
             if (!title || !torreId || !frenteId) {
                 formMessageDiv.textContent = 'Título, Torre e Frente são obrigatórios.';
                 return;
@@ -725,25 +801,25 @@
                  formMessageDiv.textContent = 'Por favor, selecione uma Frente.';
                 return;
             }
-            formMessageDiv.textContent = ''; 
-
+            formMessageDiv.textContent = '';
             const newRequest = {
                 id: Date.now(), // ID único para a solicitação
                 title: title,
                 solicitant: solicitant,
                 date: new Date().toISOString(),
                 status: 'Backlog',
+     
                 torreId: torreId, // Salva o ID da Torre (NOVO)
                 frenteId: frenteId, // Salva o ID da Frente (NOVO)
                 conclusionDate: '',
                 updateDate: new Date().toLocaleDateString('pt-BR'), 
                 fileLink: ''
+    
             };
 
             const requests = loadRequests();
             requests.push(newRequest);
             saveRequests(requests);
-
             // Reseta o formulário
             titleInput.value = '';
             torreSelect.selectedIndex = 0;
@@ -761,11 +837,11 @@
                 requests[index][field] = newValue;
                 
                 if (field !== 'updateDate' && oldValue !== newValue) {
-                    requests[index].updateDate = new Date().toLocaleDateString('pt-BR'); 
+                    requests[index].updateDate = new Date().toLocaleDateString('pt-BR');
                 }
 
                 saveRequests(requests);
-                renderTable(); 
+                renderTable();
             }
         }
 
@@ -794,7 +870,6 @@
             
             // Ordena as torres por nome
             const sortedTorres = [...ALL_TOWERS].sort((a,b) => a.nome.localeCompare(b.nome));
-
             sortedTorres.forEach(torre => {
                 const option = document.createElement('option');
                 option.value = torre.id; // Salva o ID da torre
@@ -812,17 +887,18 @@
                 return;
             }
             
-            const torre = ALL_TOWERS.find(t => t.id == torreId); // Usa == para comparar (valor pode ser string)
+            const torre = ALL_TOWERS.find(t => t.id == torreId);
+            // Usa == para comparar (valor pode ser string)
             
             if (torre && torre.frentes) {
                  // Ordena as frentes alfabeticamente
                 const sortedFrentes = [...torre.frentes].sort((a, b) => a.nome.localeCompare(b.nome));
-
                 sortedFrentes.forEach(frente => {
                     const option = document.createElement('option');
                     option.value = frente.id; // Salva o ID da frente
                     option.textContent = frente.nome;
                     select.appendChild(option);
+     
                 });
             }
         }
@@ -832,19 +908,20 @@
             const select = document.getElementById('userNameSelect');
             select.innerHTML = ''; // Limpa antes de preencher
             
-            const users = loadUserList(); // Carrega do localStorage
+            const users = loadUserList();
+            // Carrega do localStorage
             
             users.forEach(user => {
                 const option = document.createElement('option');
                 option.value = user;
                 option.textContent = user;
+                
                 if (user === users[0]) { // "Selecione seu Nome..."
                     option.disabled = true;
                     option.selected = true;
                 }
                 select.appendChild(option);
             });
-            
             select.onchange = checkIfPowerUser; // ATUALIZADO
         }
 
@@ -852,9 +929,11 @@
         // --- Inicialização ---
         window.onload = () => {
             // PASSO 1: Carrega os dados de Torres e Usuários
-            loadTowersData(); // Carrega ALL_TOWERS
+            loadTowersData();
+            // Carrega ALL_TOWERS
             populateUserSelect(); 
-            populateTorreSelect(); // Popula o dropdown de Torres no formulário
+            populateTorreSelect();
+            // Popula o dropdown de Torres no formulário
             
             // PASSO 2: Cuida do Login
             const lastUser = localStorage.getItem('lastUser');
@@ -863,16 +942,16 @@
 
             if (lastUser) {
                  const foundUser = users.find(u => formatName(u) === formatName(lastUser));
-                 
                  if (foundUser) {
                      // Lógica para usuário que já estava logado
-                     CURRENT_USER = formatName(lastUser); 
+                     CURRENT_USER = formatName(lastUser);
                      document.getElementById('solicitanteInput').value = CURRENT_USER;
                      updateUserDisplay(CURRENT_USER);
                      document.getElementById('authModal').style.display = 'none';
                      document.getElementById('mainContent').style.display = 'block';
                      userSelect.value = foundUser; 
-                     checkIfPowerUser(); // ATUALIZADO
+                     checkIfPowerUser();
+                     // ATUALIZADO
                      renderTable();
                  } else {
                      logoutAndSwitchUser();
@@ -884,7 +963,7 @@
             }
             
             // Liga os botões
-            document.getElementById('authButton').onclick = authenticateUser; 
+            document.getElementById('authButton').onclick = authenticateUser;
             document.getElementById('logoutButton').onclick = logoutAndSwitchUser;
             
             // Liga o dropdown de Torres
