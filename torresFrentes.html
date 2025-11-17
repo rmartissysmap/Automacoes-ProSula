@@ -50,16 +50,24 @@
         }
         .management-form button:hover { background-color: #005aa3; }
 
-        /* Link para voltar */
+        /* Link para voltar (AJUSTADO PARA POSIÇÃO E SEM BORDA) */
         .back-link {
-            display: inline-block;
-            margin-bottom: 20px;
-            color: #0070d2;
+            position: absolute;
+            top: 25px; /* Alinha com o topo */
+            left: 25px; /* Alinha à esquerda */
             text-decoration: none;
+            color: #0070d2;
             font-weight: 600;
-            font-size: 1.1em;
+            font-size: 0.9em;
+            padding: 5px 10px;
+            border: none; /* Borda Removida */
+            border-radius: 4px;
+            transition: background-color 0.2s;
         }
-        .back-link:hover { text-decoration: underline; }
+        .back-link:hover { 
+            text-decoration: underline; 
+            background-color: #e6f7ff; /* Adiciona um hover suave */
+        }
         #adminMessage {
             text-align: center;
             font-weight: bold;
@@ -186,13 +194,12 @@
 <body>
 
     <div class="container">
+        <a href="index.html" class="back-link">&larr; Voltar para Gestão de Solicitações</a>
+        
         <h1>Gestão de Torres e Frentes</h1>
         <h2>Adicione torres, frentes e líderes responsáveis</h2>
         
         <div class="tool-section">
-            
-            <!-- ATUALIZADO: Link aponta para index.html -->
-            <a href="index.html" class="back-link">&larr; Voltar para Solicitações</a>
             
             <h3>Adicionar Nova Torre</h3>
             <div class="management-form">
@@ -204,8 +211,7 @@
 
             <h3>Torres e Frentes Atuais</h3>
             <div id="torresListContainer">
-                <!-- As torres e frentes serão renderizadas aqui pelo JS -->
-            </div>
+                </div>
         </div>
     </div>
     
@@ -630,12 +636,9 @@
             let requests = loadRequests();
             requests.forEach(req => {
                 if (req.torreId === torreId) {
-                    // (O index.html fará a busca pelo ID, então não precisamos atualizar o nome aqui)
-                    // Mas se estivéssemos salvando o nome, faríamos a troca aqui.
-                    // A nova estrutura do index.html (próxima resposta) já cuida disso.
+                    // (Não precisamos atualizar o nome se o index.html usar IDs)
                 }
             });
-            // saveRequests(requests); // (Não necessário se o index.html usar IDs)
             
             showMessage(`Nome da torre atualizado para "${novoNome}".`, 'green');
             // Re-renderiza para garantir que o input tenha o nome formatado
