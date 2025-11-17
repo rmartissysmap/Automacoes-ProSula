@@ -581,7 +581,7 @@
                 tr.appendChild(createEditableCell(req.solicitant, index, 'solicitant', false)); 
                 tr.appendChild(createStatusCell(req, index, canEditRestrictedFields));
                 
-                // ATUALIZAÇÃO CRUCIAL: Usa o nome da torre/frente pelos IDs (ou usa o valor antigo se não tiver ID)
+                // ATUALIZAÇÃO: Usa o nome da torre/frente pelos IDs (ou usa o valor antigo se não tiver ID)
                 const teamName = req.torreId ? getTorreFrenteNames(req.torreId, req.frenteId) : req.team;
                 tr.appendChild(createReadOnlyCell(teamName || 'N/A')); 
                 
