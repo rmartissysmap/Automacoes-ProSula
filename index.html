@@ -139,7 +139,7 @@
         }
         #automationTable tr:nth-child(even) { background-color: #f9f9f9; }
         
-        /* --- Ajustes de Largura das Colunas --- */
+        /* --- NOVOS Ajustes de Largura das Colunas --- */
         #automationTable th:nth-child(1), #automationTable td:nth-child(1) { width: 30%; } /* Título */
         #automationTable th:nth-child(2), #automationTable td:nth-child(2) { width: 15%; } /* Solicitante */
         #automationTable th:nth-child(4), #automationTable td:nth-child(4) { width: 20%; } /* Frente / Torre */
@@ -395,7 +395,7 @@
         function loadTowersData() {
             let towers = localStorage.getItem(TORRE_STORAGE_KEY);
             if (!towers) {
-                // Se não existir, PREENCHE com os dados padrão
+                // Se não existir, PRENCHE com os dados padrão
                 localStorage.setItem(TORRE_STORAGE_KEY, JSON.stringify(DEFAULT_TORRES_DATA));
                 ALL_TOWERS = DEFAULT_TORRES_DATA;
             } else {
@@ -581,7 +581,7 @@
                 tr.appendChild(createEditableCell(req.solicitant, index, 'solicitant', false)); 
                 tr.appendChild(createStatusCell(req, index, canEditRestrictedFields));
                 
-                // ATUALIZAÇÃO: Usa o nome da torre/frente pelos IDs (ou usa o valor antigo se não tiver ID)
+                // ATUALIZAÇÃO CRUCIAL: Usa o nome da torre/frente pelos IDs (ou usa o valor antigo se não tiver ID)
                 const teamName = req.torreId ? getTorreFrenteNames(req.torreId, req.frenteId) : req.team;
                 tr.appendChild(createReadOnlyCell(teamName || 'N/A')); 
                 
@@ -610,7 +610,7 @@
         function createLinkFileCell(req, index, isRestricted) {
             const cell = document.createElement('td');
             cell.className = 'file-link-cell';
-            const canEdit = !isRestricted || isAuthorized(CURRENT_USER); // Apenas ADM pode editar
+            const canEdit = isAuthorized(CURRENT_USER); // APENAS ADM PODE EDITAR
             const fileLink = req.fileLink ? req.fileLink.trim() : '';
 
             if (canEdit) {
