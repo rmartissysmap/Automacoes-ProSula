@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Automatização - Gestão de Solicitações</title>
-    <meta name="viewport" content="width=device-width, initial-scale-1.0">
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         /* Estilos Base */
         body { 
@@ -140,10 +139,13 @@
         }
         #automationTable tr:nth-child(even) { background-color: #f9f9f9; }
         
-        /* --- Ajustes de Largura das Colunas --- */
+        /* --- NOVOS Ajustes de Largura das Colunas --- */
+        /* Colunas com conteúdo variável (Título, Solicitante, Frente) usam % */
         #automationTable th:nth-child(1), #automationTable td:nth-child(1) { width: 30%; } /* Título */
         #automationTable th:nth-child(2), #automationTable td:nth-child(2) { width: 15%; } /* Solicitante */
         #automationTable th:nth-child(4), #automationTable td:nth-child(4) { width: 20%; } /* Frente / Torre */
+
+        /* Colunas com conteúdo fixo (Status, Datas, Ações) usam PX para não espremer */
         #automationTable th:nth-child(3), #automationTable td:nth-child(3) { 
             width: 120px; /* Status */
             white-space: nowrap;
@@ -248,8 +250,7 @@
             <p>Por favor, **selecione** seu nome completo para começar:</p>
             
             <select id="userNameSelect">
-                <!-- As opções serão preenchidas pelo JavaScript -->
-            </select>
+                </select>
             
             <div id="cpfInputGroup">
                 <input type="password" id="cpfInput" placeholder="Digite a Senha de Acesso" required> 
@@ -263,16 +264,14 @@
 
     <div class="container" id="mainContent">
         
-        <!-- PAINEL DE USUÁRIO ATUALIZADO -->
         <div id="userControl">
             <div class="user-info">
                 <span id="userNameDisplay">Usuário</span>
                 <span class="user-icon" id="userInitial">U</span>
             </div>
             <div class="user-options">
-                <!-- ATUALIZADO: Link aponta para o nome de arquivo correto -->
-                <a href="InclusãoExclusãoUsuário.html" id="userManagementLink">Gerenciar Usuários</a>
-                <a href="torresFrentes.html" id="towerManagementLink">Gerenciar Torres</a>
+                <a href="incluriexcluir.html" id="userManagementLink">Gerenciar Usuários</a>
+                <a href="gestao_torres.html" id="towerManagementLink">Gerenciar Torres</a>
                 <button id="logoutButton">Trocar Usuário</button>
             </div>
         </div>
@@ -283,7 +282,6 @@
         <div class="tool-section">
 
             <h3>Adicionar Nova Solicitação</h3>
-            <!-- FORMULÁRIO ATUALIZADO COM TORRE E FRENTE -->
             <div class="input-form">
                 <div>
                     <label for="solicitacaoInput">Título da Automação</label>
@@ -317,8 +315,7 @@
                             <th>Título da Automação</th>
                             <th>Solicitante</th>
                             <th>Status</th>
-                            <th>Frente / Torre</th> <!-- Coluna atualizada -->
-                            <th>Data Criação</th>
+                            <th>Frente / Torre</th> <th>Data Criação</th>
                             <th>Data Conclusão</th>
                             <th>Data Atualização</th>
                             <th>Link Arquivo</th> 
@@ -326,8 +323,7 @@
                         </tr>
                     </thead>
                     <tbody id="automationTableBody">
-                        <!-- Conteúdo dinâmico -->
-                    </tbody>
+                        </tbody>
                 </table>
             </div>
         </div>
@@ -411,10 +407,11 @@
         function loadRequests() {
             let requests = localStorage.getItem(REQUEST_STORAGE_KEY);
             if (!requests) {
+                // ATUALIZAÇÃO: Dados iniciais agora usam IDs
                 const initialData = [
-                    { title: 'Concierge', solicitant: 'Vinicius', date: '2025-10-22T00:00:00.000Z', status: 'Finalizado', team: 'Delta / ProSula', conclusionDate: '22/10/2025', updateDate: '22/10/2025', fileLink: 'https://exemplo.com/concierge' },
-                    { title: 'Integração', solicitant: 'Matheus', date: '2025-10-28T00:00:00.000Z', status: 'Finalizado', team: 'Gama / Cotador/Multicanalidade (Comercial)', conclusionDate: '28/10/2025', updateDate: '28/10/2025', fileLink: 'https://exemplo.com/integracao' },
-                    { title: 'Paliativo', solicitant: 'Vinicius', date: new Date().toISOString(), status: 'Em Processo', team: 'Delta / Relacionamento (Gestão de Leads, Transf, Com e Rex)', conclusionDate: '', updateDate: '', fileLink: '' }
+                    { id: 1, title: 'Concierge', solicitant: 'Vinicius', date: '2025-10-22T00:00:00.000Z', status: 'Finalizado', torreId: 1678886400001, frenteId: 101, conclusionDate: '22/10/2025', updateDate: '22/10/2025', fileLink: 'https://exemplo.com/concierge' },
+                    { id: 2, title: 'Integração', solicitant: 'Matheus', date: '2025-10-28T00:00:00.000Z', status: 'Finalizado', torreId: 1678886400003, frenteId: 301, conclusionDate: '28/10/2025', updateDate: '28/10/2025', fileLink: 'https://exemplo.com/integracao' },
+                    { id: 3, title: 'Paliativo', solicitant: 'Vinicius', date: new Date().toISOString(), status: 'Em Processo', torreId: 1678886400001, frenteId: 102, conclusionDate: '', updateDate: '', fileLink: '' }
                 ];
                 saveRequests(initialData);
                 requests = JSON.stringify(initialData);
@@ -549,6 +546,21 @@
         
         // --- Funções de Renderização da Tabela ---
         
+        // ATUALIZAÇÃO: Função auxiliar para buscar nomes por IDs
+        function getTorreFrenteNames(torreId, frenteId) {
+            // Recarrega os dados das torres caso tenham sido atualizados em outra página
+            loadTowersData(); 
+            
+            const torre = ALL_TOWERS.find(t => t.id == torreId);
+            if (!torre) return "Torre Desconhecida";
+            
+            const frente = torre.frentes.find(f => f.id == frenteId);
+            if (!frente) return `${torre.nome} / Frente Desconhecida`;
+            
+            return `${torre.nome} / ${frente.nome}`;
+        }
+
+        
         function renderTable() {
             const tbody = document.getElementById('automationTableBody');
             tbody.innerHTML = '';
@@ -566,8 +578,9 @@
                 tr.appendChild(createEditableCell(req.solicitant, index, 'solicitant', false)); 
                 tr.appendChild(createStatusCell(req, index, canEditRestrictedFields));
                 
-                // Coluna 'team' agora é 'Frente / Torre'
-                tr.appendChild(createReadOnlyCell(req.team || 'N/A')); 
+                // ATUALIZAÇÃO: Busca o nome da torre/frente pelos IDs (ou usa o valor antigo se não tiver ID)
+                const teamName = req.torreId ? getTorreFrenteNames(req.torreId, req.frenteId) : req.team;
+                tr.appendChild(createReadOnlyCell(teamName || 'N/A')); 
                 
                 tr.appendChild(createReadOnlyCell(formatDate(req.date)));
 
@@ -693,11 +706,11 @@
             const formMessageDiv = document.getElementById('formMessage');
             
             const title = titleInput.value.trim();
-            const torreName = torreSelect.value ? torreSelect.options[torreSelect.selectedIndex].text : '';
-            const frenteName = frenteSelect.value ? frenteSelect.options[frenteSelect.selectedIndex].text : '';
+            const torreId = torreSelect.value; // Salva o ID
+            const frenteId = frenteSelect.value; // Salva o ID
             const solicitant = CURRENT_USER; 
 
-            if (!title || !torreName || !frenteName) {
+            if (!title || !torreId || !frenteId) {
                 formMessageDiv.textContent = 'Título, Torre e Frente são obrigatórios.';
                 return;
             }
@@ -712,11 +725,13 @@
             formMessageDiv.textContent = ''; 
 
             const newRequest = {
+                id: Date.now(), // ID único para a solicitação
                 title: title,
                 solicitant: solicitant,
                 date: new Date().toISOString(),
                 status: 'Backlog',
-                team: `${torreName} / ${frenteName}`, // Salva a Torre e Frente
+                torreId: torreId, // Salva o ID da Torre
+                frenteId: frenteId, // Salva o ID da Frente
                 conclusionDate: '',
                 updateDate: new Date().toLocaleDateString('pt-BR'), 
                 fileLink: ''
@@ -729,7 +744,7 @@
             // Reseta o formulário
             titleInput.value = '';
             torreSelect.selectedIndex = 0;
-            frenteSelect.innerHTML = '<option value="">Selecione a Torre Primeiro</option>';
+            populateFrenteSelect(''); // Reseta o dropdown de frente
             
             renderTable();
         }
@@ -774,7 +789,10 @@
             const select = document.getElementById('torreSelect');
             select.innerHTML = '<option value="">Selecione a Torre</option>'; // Limpa
             
-            ALL_TOWERS.forEach(torre => {
+            // Ordena as torres por nome
+            const sortedTorres = [...ALL_TOWERS].sort((a,b) => a.nome.localeCompare(b.nome));
+
+            sortedTorres.forEach(torre => {
                 const option = document.createElement('option');
                 option.value = torre.id; // Salva o ID da torre
                 option.textContent = torre.nome;
@@ -874,6 +892,3 @@
     </script>
 </body>
 </html>
-
-
-
