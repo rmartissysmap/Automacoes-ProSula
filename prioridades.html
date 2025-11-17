@@ -16,12 +16,32 @@
             background-color: white;
             padding: 30px;
             border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
             border-top: 5px solid #0070d2;
+            position: relative; /* Necessário para o botão de voltar/início */
         }
         h1 { color: #1a1a1a; font-size: 2em; margin-bottom: 5px; text-align: center; }
         h2 { color: #6a6a6a; font-size: 1.1em; font-weight: 300; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; margin-top: 0; margin-bottom: 20px; text-align: center; }
         
+        /* Botão Voltar para Início */
+        #backToMain {
+            position: absolute;
+            top: 25px;
+            left: 25px;
+            text-decoration: none;
+            color: #0070d2;
+            font-weight: 600;
+            font-size: 0.9em;
+            padding: 5px 10px;
+            border: 1px solid #0070d2;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+        #backToMain:hover {
+            background-color: #e6f7ff;
+            text-decoration: underline;
+        }
+
         /* Formulário de Input */
         .input-form {
             display: flex;
@@ -61,6 +81,14 @@
             padding: 0;
             margin: 0;
         }
+        /* Adicionado para dar estilo de prioridade */
+        #priorityList li:not(.status-done) {
+             border-left: 5px solid #ffa000; /* Laranja para itens pendentes/prioritários */
+        }
+        #priorityList li.status-done {
+             border-left: 5px solid #2E7D32; /* Verde para itens concluídos */
+        }
+
         #priorityList li {
             display: flex;
             align-items: center;
@@ -176,6 +204,8 @@
 <body>
 
     <div class="container">
+        <a href="index.html" id="backToMain">← Voltar para a Gestão de Solicitações</a>
+        
         <h1 id="pageTitle">Minhas Prioridades</h1>
         <h2 id="userNameDisplay">Usuário: Carregando...</h2>
 
@@ -291,7 +321,8 @@
                 doneDate: ''
             };
 
-            tickets.unshift(newTicket); // Adiciona como o primeiro da lista
+            // CORREÇÃO 1: Novos chamados são adicionados NO FIM da lista (de baixo para cima)
+            tickets.push(newTicket); 
             saveTickets(tickets);
             input.value = '';
             message.textContent = '';
@@ -306,11 +337,11 @@
             if (index !== -1) {
                 const isDone = tickets[index].done;
                 tickets[index].done = !isDone;
-                // Registra a data de conclusão
                 tickets[index].doneDate = !isDone ? new Date().toISOString() : '';
+                
+                // Salva os tickets e, em seguida, os reordena
                 saveTickets(tickets);
-                renderList();
-                updateStats();
+                reorderOnStatusChange(id, !isDone); 
             }
         }
 
@@ -324,6 +355,29 @@
             renderList();
             updateStats();
         }
+        
+        // NOVO: Lógica de reordenação automática ao mudar o status
+        function reorderOnStatusChange(id, isDone) {
+            let tickets = loadTickets();
+            const ticketIndex = tickets.findIndex(t => t.id == id);
+            
+            if (ticketIndex === -1) return;
+
+            const ticket = tickets.splice(ticketIndex, 1)[0];
+            
+            if (isDone) {
+                // CORREÇÃO 3: Se FINALIZADO, vai para o FIM da lista
+                tickets.push(ticket);
+            } else {
+                // CORREÇÃO 3: Se voltando para PENDENTE, vai para o INÍCIO da lista
+                tickets.unshift(ticket);
+            }
+
+            saveTickets(tickets);
+            renderList();
+            updateStats();
+        }
+
 
         // --- Funções de Renderização ---
 
@@ -343,7 +397,8 @@
                 const li = document.createElement('li');
                 li.setAttribute('draggable', 'true');
                 li.setAttribute('data-id', ticket.id);
-                li.className = ticket.done ? 'status-done' : 'status-pending';
+                // A classe é usada para aplicar o estilo de borda
+                li.className = ticket.done ? 'status-done' : 'status-pending'; 
 
                 // Handle de Arraste (Mover)
                 const handle = document.createElement('span');
@@ -359,7 +414,8 @@
 
                 // Botão de Status
                 const statusBtn = document.createElement('button');
-                statusBtn.className = 'status-btn ' + (ticket.done ? 'status-done' : 'status-pending');
+                const statusClass = ticket.done ? 'status-done' : 'status-pending';
+                statusBtn.className = 'status-btn ' + statusClass;
                 statusBtn.textContent = ticket.done ? 'Atendido' : 'Pendente';
                 statusBtn.onclick = () => toggleDone(ticket.id);
                 li.appendChild(statusBtn);
@@ -404,8 +460,7 @@
             e.preventDefault();
             e.dataTransfer.dropEffect = 'move';
             if (this !== dragListItem) {
-                // Adiciona um indicador visual onde o item será solto
-                this.style.borderTop = '2px solid #0070d2'; 
+                this.style.borderTop = '2px solid #0070d2';
             }
         }
 
@@ -439,7 +494,6 @@
             const items = Array.from(list.children);
             const originalTickets = loadTickets();
             
-            // Cria uma nova lista na ordem em que estão os itens na tela
             const reorderedTickets = items.map(item => {
                 const id = item.getAttribute('data-id');
                 return originalTickets.find(t => t.id == id);
@@ -484,7 +538,7 @@
             document.getElementById('weekCount').textContent = weekCount;
             document.getElementById('monthCount').textContent = monthCount;
 
-            if (ADM_USERS.includes(CURRENT_USER.toUpperCase())) { // Verifica se é ADM
+            if (ADM_USERS.includes(CURRENT_USER.toUpperCase())) {
                 renderAdmStats(thisMonth);
             }
         }
@@ -578,12 +632,8 @@
                 CURRENT_USER = lastUser; 
                 document.getElementById('userNameDisplay').textContent = 'Usuário: ' + CURRENT_USER;
             } else {
-                // Se não houver usuário, volta para a página principal (simulação de login)
                 alert('Usuário não identificado. Redirecionando para o login.');
-                // window.location.href = 'index.html'; 
-                // Para testes, mantemos no "Visitante" se a linha de cima for comentada
-                // CURRENT_USER = 'Visitante';
-                // document.getElementById('userNameDisplay').textContent = 'Usuário: ' + CURRENT_USER + ' (Não Logado)';
+                window.location.href = 'index.html'; // Redireciona para a página principal
                 return;
             }
 
