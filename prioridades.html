@@ -18,13 +18,13 @@
             border-radius: 12px;
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
             border-top: 5px solid #0070d2;
-            position: relative; /* Necessário para o botão de voltar/início */
+            position: relative; 
         }
         h1 { color: #1a1a1a; font-size: 2em; margin-bottom: 5px; text-align: center; }
         h2 { color: #6a6a6a; font-size: 1.1em; font-weight: 300; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; margin-top: 0; margin-bottom: 20px; text-align: center; }
         
-        /* Botão Voltar para Início */
-        #backToMain {
+        /* NOVO ESTILO PARA O LINK DE VOLTAR */
+        .back-link {
             position: absolute;
             top: 25px;
             left: 25px;
@@ -37,7 +37,7 @@
             border-radius: 4px;
             transition: background-color 0.2s;
         }
-        #backToMain:hover {
+        .back-link:hover {
             background-color: #e6f7ff;
             text-decoration: underline;
         }
@@ -204,7 +204,7 @@
 <body>
 
     <div class="container">
-        <a href="index.html" id="backToMain">← Voltar para a Gestão de Solicitações</a>
+        <a href="index.html" class="back-link">&larr; Voltar para Solicitações</a>
         
         <h1 id="pageTitle">Minhas Prioridades</h1>
         <h2 id="userNameDisplay">Usuário: Carregando...</h2>
@@ -303,7 +303,7 @@
             const message = document.getElementById('formMessage');
             const title = input.value.trim().toUpperCase();
 
-            // CORREÇÃO 2: Regex flexibilizado para 3-5 letras e 4-7 dígitos
+            // Regex flexibilizado para 3-5 letras e 4-7 dígitos
             if (!title || !/^[A-Z]{3,5}-\d{4,7}$/.test(title)) {
                 message.textContent = 'Formato inválido. Use 3 a 5 letras (XXX-), seguidas de 4 a 7 dígitos (1234-1234567).';
                 return;
@@ -322,7 +322,7 @@
                 doneDate: ''
             };
 
-            // CORREÇÃO 1: Novos chamados são adicionados NO FIM da lista (de baixo para cima)
+            // Novos chamados são adicionados NO FIM da lista (de baixo para cima, mantendo a ordem de inclusão)
             tickets.push(newTicket); 
             saveTickets(tickets);
             input.value = '';
