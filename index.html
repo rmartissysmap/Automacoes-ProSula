@@ -140,7 +140,6 @@
         #automationTable tr:nth-child(even) { background-color: #f9f9f9; }
         
         /* --- NOVOS Ajustes de Largura das Colunas --- */
-        /* Colunas com conteúdo variável (Título, Solicitante, Frente) usam % */
         #automationTable th:nth-child(1), #automationTable td:nth-child(1) { width: 30%; } /* Título */
         #automationTable th:nth-child(2), #automationTable td:nth-child(2) { width: 15%; } /* Solicitante */
         #automationTable th:nth-child(4), #automationTable td:nth-child(4) { width: 20%; } /* Frente / Torre */
@@ -544,7 +543,7 @@
             return d.toLocaleDateString('pt-BR'); 
         }
         
-        // --- Funções de Renderização da Tabela ---
+        // --- Funções de Renderização da Tabela (ATUALIZADA) ---
         
         // ATUALIZAÇÃO: Função auxiliar para buscar nomes por IDs
         function getTorreFrenteNames(torreId, frenteId) {
@@ -578,7 +577,7 @@
                 tr.appendChild(createEditableCell(req.solicitant, index, 'solicitant', false)); 
                 tr.appendChild(createStatusCell(req, index, canEditRestrictedFields));
                 
-                // ATUALIZAÇÃO: Busca o nome da torre/frente pelos IDs (ou usa o valor antigo se não tiver ID)
+                // ATUALIZAÇÃO: Usa o nome da torre/frente pelos IDs OU o valor antigo (req.team)
                 const teamName = req.torreId ? getTorreFrenteNames(req.torreId, req.frenteId) : req.team;
                 tr.appendChild(createReadOnlyCell(teamName || 'N/A')); 
                 
@@ -671,7 +670,7 @@
         
         function createStatusCell(req, index, canEdit) { // canEdit agora é true apenas para ADM
             const statusCell = document.createElement('td');
-            const statusClass = `status-${req.status.toLowerCase().replace(' ', '-')}`;
+            const statusClass = `status-${req.status.toLowerCase().replace(' ', '-')`;
 
             if (canEdit) {
                 const select = document.createElement('select');
@@ -730,8 +729,9 @@
                 solicitant: solicitant,
                 date: new Date().toISOString(),
                 status: 'Backlog',
-                torreId: torreId, // Salva o ID da Torre
-                frenteId: frenteId, // Salva o ID da Frente
+                torreId: torreId, // Salva o ID da Torre (NOVO)
+                frenteId: frenteId, // Salva o ID da Frente (NOVO)
+                team: getTorreFrenteNames(torreId, frenteId), // Salva o nome como backup (Antigo formato)
                 conclusionDate: '',
                 updateDate: new Date().toLocaleDateString('pt-BR'), 
                 fileLink: ''
