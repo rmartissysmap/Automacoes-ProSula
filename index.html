@@ -158,7 +158,7 @@
         #automationTable th:nth-child(2), #automationTable td:nth-child(2) { width: 15%;
         } /* Solicitante */
         #automationTable th:nth-child(4), #automationTable td:nth-child(4) { width: 20%;
-        } /* Frente / Torre */
+        } /* Torre / Frente */
 
         /* Colunas com conteúdo fixo (Status, Datas, Ações) usam PX para não espremer */
         #automationTable th:nth-child(3), #automationTable td:nth-child(3) { 
@@ -365,7 +365,7 @@
                             <th>Solicitante</th>
                             <th>Status</th>
                     
-                            <th>Frente / Torre</th> <th>Data Criação</th>
+                            <th>Torre / Frente</th> <th>Data Criação</th>
                             <th>Data Conclusão</th>
                             <th>Data Atualização</th>
                             <th>Link Arquivo</th> 
@@ -616,6 +616,7 @@
             const frente = torre.frentes.find(f => f.id == frenteId);
             if (!frente) return `${torre.nome} / Frente Desconhecida`;
             
+            // Retorna no formato CORRETO: Torre / Frente
             return `${torre.nome} / ${frente.nome}`;
         }
 
@@ -639,12 +640,12 @@
                 tr.appendChild(createStatusCell(req, index, canEditRestrictedFields));
         
                 
-                // ATUALIZAÇÃO: Usa o nome da torre/frente pelos IDs (ou usa o valor antigo se não tiver ID)
+                // LÓGICA DE EXIBIÇÃO: Prioriza IDs (Torre/Frente) e usa 'team' (Frente/Time) como fallback
                 let teamName;
                 if (req.torreId) {
                     teamName = getTorreFrenteNames(req.torreId, req.frenteId);
                 } else if (req.team) {
-                    // Fallback para dados antigos (como 'CSP')
+                    // Fallback para dados antigos (como 'CSP' - que é uma Frente/Time)
                     teamName = req.team;
                 } else {
                     teamName = 'N/A';
