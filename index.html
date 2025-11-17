@@ -139,7 +139,7 @@
         }
         #automationTable tr:nth-child(even) { background-color: #f9f9f9; }
         
-        /* --- NOVOS Ajustes de Largura das Colunas --- */
+        /* --- Ajustes de Largura das Colunas --- */
         #automationTable th:nth-child(1), #automationTable td:nth-child(1) { width: 30%; } /* Título */
         #automationTable th:nth-child(2), #automationTable td:nth-child(2) { width: 15%; } /* Solicitante */
         #automationTable th:nth-child(4), #automationTable td:nth-child(4) { width: 20%; } /* Frente / Torre */
@@ -406,8 +406,12 @@
         function loadRequests() {
             let requests = localStorage.getItem(REQUEST_STORAGE_KEY);
             if (!requests) {
-                // ATUALIZAÇÃO: Dados iniciais agora usam IDs
+                // ATUALIZAÇÃO: Dados iniciais para forçar a visibilidade
                 const initialData = [
+                    // Dados antigos que só tinham "team" (para forçar o fallback na tabela)
+                    { id: 10, title: 'CSP Query', solicitant: 'Diego', date: '2025-11-04T00:00:00.000Z', status: 'Finalizado', team: 'CSP', conclusionDate: '04/11/2025', updateDate: '04/11/2025', fileLink: 'https://exemplo.com/cspquery' },
+                    { id: 11, title: 'Reset de Senha', solicitant: 'Diego', date: '2025-11-11T00:00:00.000Z', status: 'Finalizado', team: 'CSP', conclusionDate: '11/11/2025', updateDate: '11/11/2025', fileLink: 'https://exemplo.com/reset-senha' },
+                    // Novos dados com IDs
                     { id: 1, title: 'Concierge', solicitant: 'Vinicius', date: '2025-10-22T00:00:00.000Z', status: 'Finalizado', torreId: 1678886400001, frenteId: 101, conclusionDate: '22/10/2025', updateDate: '22/10/2025', fileLink: 'https://exemplo.com/concierge' },
                     { id: 2, title: 'Integração', solicitant: 'Matheus', date: '2025-10-28T00:00:00.000Z', status: 'Finalizado', torreId: 1678886400003, frenteId: 301, conclusionDate: '28/10/2025', updateDate: '28/10/2025', fileLink: 'https://exemplo.com/integracao' },
                     { id: 3, title: 'Paliativo', solicitant: 'Vinicius', date: new Date().toISOString(), status: 'Em Processo', torreId: 1678886400001, frenteId: 102, conclusionDate: '', updateDate: '', fileLink: '' }
@@ -543,7 +547,7 @@
             return d.toLocaleDateString('pt-BR'); 
         }
         
-        // --- Funções de Renderização da Tabela (ATUALIZADA) ---
+        // --- Funções de Renderização da Tabela ---
         
         // ATUALIZAÇÃO: Função auxiliar para buscar nomes por IDs
         function getTorreFrenteNames(torreId, frenteId) {
@@ -577,7 +581,7 @@
                 tr.appendChild(createEditableCell(req.solicitant, index, 'solicitant', false)); 
                 tr.appendChild(createStatusCell(req, index, canEditRestrictedFields));
                 
-                // ATUALIZAÇÃO: Usa o nome da torre/frente pelos IDs OU o valor antigo (req.team)
+                // ATUALIZAÇÃO: Usa o nome da torre/frente pelos IDs (ou usa o valor antigo se não tiver ID)
                 const teamName = req.torreId ? getTorreFrenteNames(req.torreId, req.frenteId) : req.team;
                 tr.appendChild(createReadOnlyCell(teamName || 'N/A')); 
                 
@@ -670,7 +674,7 @@
         
         function createStatusCell(req, index, canEdit) { // canEdit agora é true apenas para ADM
             const statusCell = document.createElement('td');
-            const statusClass = `status-${req.status.toLowerCase().replace(' ', '-')`;
+            const statusClass = `status-${req.status.toLowerCase().replace(' ', '-')}`;
 
             if (canEdit) {
                 const select = document.createElement('select');
@@ -731,7 +735,6 @@
                 status: 'Backlog',
                 torreId: torreId, // Salva o ID da Torre (NOVO)
                 frenteId: frenteId, // Salva o ID da Frente (NOVO)
-                team: getTorreFrenteNames(torreId, frenteId), // Salva o nome como backup (Antigo formato)
                 conclusionDate: '',
                 updateDate: new Date().toLocaleDateString('pt-BR'), 
                 fileLink: ''
