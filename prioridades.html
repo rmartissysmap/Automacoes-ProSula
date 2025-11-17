@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Minhas Prioridades - Gestão de Chamados</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #e9eef2;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            border-top: 5px solid #0070d2;
+        }
+        h1 { color: #1a1a1a; font-size: 2em; margin-bottom: 5px; text-align: center; }
+        h2 { color: #6a6a6a; font-size: 1.1em; font-weight: 300; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; margin-top: 0; margin-bottom: 20px; text-align: center; }
+        
+        /* Formulário de Input */
+        .input-form {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #d0d0d0;
+            border-radius: 8px;
+            background-color: #f5f5f5;
+            align-items: center;
+        }
+        .input-form input[type="text"] {
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            height: 40px;
+            box-sizing: border-box;
+        }
+        .input-form button {
+            padding: 10px 20px;
+            background-color: #0070d2;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            height: 40px;
+        }
+        .input-form button:hover {
+            background-color: #005aa3;
+        }
+
+        /* Lista de Prioridades (Drag and Drop) */
+        #priorityList {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        #priorityList li {
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            margin-bottom: 5px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            background-color: #ffffff;
+            cursor: grab;
+            transition: background-color 0.2s, box-shadow 0.2s;
+        }
+        #priorityList li:hover {
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        #priorityList li.dragging {
+            opacity: 0.5;
+            border: 2px dashed #0070d2;
+        }
+        
+        /* Status do Chamado */
+        .handle {
+            cursor: move;
+            margin-right: 15px;
+            color: #ccc;
+            font-size: 1.2em;
+        }
+        .ticket-title {
+            flex-grow: 1;
+            font-weight: 600;
+        }
+        .status-btn {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: opacity 0.2s;
+        }
+        .status-pending {
+            background-color: #f0f0f0;
+            color: #6a6a6a;
+        }
+        .status-done {
+            background-color: #E8F5E9; /* Verde Claro */
+            color: #2E7D32; /* Verde Escuro */
+            border: 1px solid #2E7D32;
+        }
+        .delete-btn {
+            background: none;
+            border: none;
+            color: #c53929;
+            cursor: pointer;
+            margin-left: 10px;
+            font-size: 1.1em;
+        }
+
+        /* Estatísticas e Resumo */
+        .stats-section {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+        }
+        .stats-box {
+            background-color: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            width: 32%;
+            text-align: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .stats-box h4 {
+            margin-top: 0;
+            color: #0070d2;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+        }
+        .stats-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #1a1a1a;
+        }
+        .total-done { color: #2E7D32; }
+        
+        /* Estilo para ADM */
+        #admStats {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #0070d2;
+        }
+        #admStats h3 {
+            color: #0070d2;
+            text-align: center;
+        }
+        #admStats table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 0.9em;
+        }
+        #admStats th, #admStats td {
+            padding: 10px;
+            border: 1px solid #e0e0e0;
+            text-align: left;
+        }
+        #admStats th {
+            background-color: #0070d2;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1 id="pageTitle">Minhas Prioridades</h1>
+        <h2 id="userNameDisplay">Usuário: Carregando...</h2>
+
+        <h3>Adicionar Novo Chamado</h3>
+        <div class="input-form">
+            <input type="text" id="ticketInput" placeholder="Ex: EXP-45728, SUP-123456" pattern="[A-Z]{3}-\d{5,6}" title="O formato deve ser XXX-12345 ou XXX-123456" required>
+            <button onclick="addTicket()">Adicionar</button>
+        </div>
+        <div id="formMessage" style="color: red; text-align: center; margin-bottom: 10px;"></div>
+
+        <h3>Chamados Priorizados (Arraste para reordenar)</h3>
+        <ul id="priorityList">
+            </ul>
+        <div id="emptyMessage" style="text-align: center; color: #6a6a6a; margin-top: 20px; display: none;">Nenhum chamado priorizado.</div>
+
+        <div id="userStats" class="stats-section">
+            <div class="stats-box">
+                <h4>Atendidos Hoje</h4>
+                <div id="todayCount" class="stats-value total-done">0</div>
+            </div>
+            <div class="stats-box">
+                <h4>Atendidos na Semana</h4>
+                <div id="weekCount" class="stats-value total-done">0</div>
+            </div>
+            <div class="stats-box">
+                <h4>Atendidos no Mês</h4>
+                <div id="monthCount" class="stats-value total-done">0</div>
+            </div>
+        </div>
+
+        <div id="admStats" style="display: none;">
+            <h3>Resumo Mensal de Chamados Priorizados por Usuário</h3>
+            <div style="overflow-x: auto;">
+                <table id="admTable">
+                    <thead>
+                        <tr>
+                            <th>Usuário</th>
+                            <th>Total Priorizado (Mês)</th>
+                            <th>Total Atendido (Mês)</th>
+                            <th>% Conclusão</th>
+                        </tr>
+                    </thead>
+                    <tbody id="admTableBody">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Variável global (SIMULA o usuário logado)
+        let CURRENT_USER = 'Visitante';
+        const PRIORITY_STORAGE_PREFIX = 'userPriorities_';
+        const ADM_USERS = ['ADM'];
+
+        // --- Funções de Utilitários de Data ---
+
+        function getTodayKey() {
+            return new Date().toLocaleDateString('pt-BR');
+        }
+
+        function getWeekKey(date) {
+            const d = new Date(date);
+            const day = d.getDay(); // 0=Domingo, 6=Sábado
+            const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Ajusta para Segunda-feira
+            const startOfWeek = new Date(d.setDate(diff));
+            return startOfWeek.toLocaleDateString('pt-BR');
+        }
+
+        function getMonthKey(date) {
+            const d = new Date(date);
+            return `${d.getMonth() + 1}/${d.getFullYear()}`;
+        }
+        
+        // --- Funções de Dados (CRUD) ---
+
+        function getStorageKey() {
+            // Usa o nome do usuário como chave para isolar os dados
+            return PRIORITY_STORAGE_PREFIX + CURRENT_USER.replace(/\s/g, '_');
+        }
+
+        function loadTickets() {
+            const key = getStorageKey();
+            const stored = localStorage.getItem(key);
+            return stored ? JSON.parse(stored) : [];
+        }
+
+        function saveTickets(tickets) {
+            const key = getStorageKey();
+            localStorage.setItem(key, JSON.stringify(tickets));
+        }
+
+        function addTicket() {
+            const input = document.getElementById('ticketInput');
+            const message = document.getElementById('formMessage');
+            const title = input.value.trim().toUpperCase();
+
+            if (!title || !/^[A-Z]{3}-\d{5,6}$/.test(title)) {
+                message.textContent = 'Formato inválido. Use XXX-12345 ou XXX-123456.';
+                return;
+            }
+
+            const tickets = loadTickets();
+            if (tickets.some(t => t.title === title)) {
+                message.textContent = `O chamado ${title} já está na sua lista de prioridades.`;
+                return;
+            }
+
+            const newTicket = {
+                id: Date.now(),
+                title: title,
+                done: false,
+                doneDate: ''
+            };
+
+            tickets.unshift(newTicket); // Adiciona como o primeiro da lista
+            saveTickets(tickets);
+            input.value = '';
+            message.textContent = '';
+            renderList();
+            updateStats();
+        }
+
+        function toggleDone(id) {
+            const tickets = loadTickets();
+            const index = tickets.findIndex(t => t.id == id);
+
+            if (index !== -1) {
+                const isDone = tickets[index].done;
+                tickets[index].done = !isDone;
+                // Registra a data de conclusão
+                tickets[index].doneDate = !isDone ? new Date().toISOString() : '';
+                saveTickets(tickets);
+                renderList();
+                updateStats();
+            }
+        }
+
+        function deleteTicket(id) {
+            if (!confirm('Tem certeza que deseja remover este chamado da sua lista de prioridades?')) {
+                return;
+            }
+            const tickets = loadTickets();
+            const newTickets = tickets.filter(t => t.id != id);
+            saveTickets(newTickets);
+            renderList();
+            updateStats();
+        }
+
+        // --- Funções de Renderização ---
+
+        function renderList() {
+            const ul = document.getElementById('priorityList');
+            const tickets = loadTickets();
+            ul.innerHTML = '';
+
+            if (tickets.length === 0) {
+                document.getElementById('emptyMessage').style.display = 'block';
+                return;
+            } else {
+                document.getElementById('emptyMessage').style.display = 'none';
+            }
+
+            tickets.forEach(ticket => {
+                const li = document.createElement('li');
+                li.setAttribute('draggable', 'true');
+                li.setAttribute('data-id', ticket.id);
+                li.className = ticket.done ? 'status-done' : 'status-pending';
+
+                // Handle de Arraste (Mover)
+                const handle = document.createElement('span');
+                handle.className = 'handle';
+                handle.innerHTML = '&#9776;'; // Símbolo de sanduíche/três linhas (para arrastar)
+                li.appendChild(handle);
+
+                // Título
+                const titleSpan = document.createElement('span');
+                titleSpan.className = 'ticket-title';
+                titleSpan.textContent = ticket.title;
+                li.appendChild(titleSpan);
+
+                // Botão de Status
+                const statusBtn = document.createElement('button');
+                statusBtn.className = 'status-btn ' + (ticket.done ? 'status-done' : 'status-pending');
+                statusBtn.textContent = ticket.done ? 'Atendido' : 'Pendente';
+                statusBtn.onclick = () => toggleDone(ticket.id);
+                li.appendChild(statusBtn);
+
+                // Botão de Excluir
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'delete-btn';
+                deleteBtn.innerHTML = '&#10006;'; // Símbolo de X
+                deleteBtn.onclick = () => deleteTicket(ticket.id);
+                li.appendChild(deleteBtn);
+
+                ul.appendChild(li);
+            });
+            setupDragAndDrop();
+        }
+        
+        // --- Lógica de Arraste e Solta (Drag and Drop) ---
+
+        let dragListItem = null;
+
+        function setupDragAndDrop() {
+            const list = document.getElementById('priorityList');
+            const listItems = list.querySelectorAll('li');
+
+            listItems.forEach(item => {
+                item.addEventListener('dragstart', handleDragStart);
+                item.addEventListener('dragover', handleDragOver);
+                item.addEventListener('dragleave', handleDragLeave);
+                item.addEventListener('drop', handleDrop);
+                item.addEventListener('dragend', handleDragEnd);
+            });
+        }
+
+        function handleDragStart(e) {
+            dragListItem = this;
+            setTimeout(() => this.classList.add('dragging'), 0);
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', this.innerHTML);
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            if (this !== dragListItem) {
+                // Adiciona um indicador visual onde o item será solto
+                this.style.borderTop = '2px solid #0070d2'; 
+            }
+        }
+
+        function handleDragLeave() {
+            this.style.borderTop = '';
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            this.style.borderTop = '';
+
+            if (dragListItem !== this) {
+                const isAfter = dragListItem.compareDocumentPosition(this) & Node.DOCUMENT_POSITION_FOLLOWING;
+                
+                if (isAfter) {
+                    this.parentNode.insertBefore(dragListItem, this.nextSibling);
+                } else {
+                    this.parentNode.insertBefore(dragListItem, this);
+                }
+                saveReorder();
+            }
+        }
+
+        function handleDragEnd() {
+            this.classList.remove('dragging');
+            dragListItem = null;
+        }
+
+        function saveReorder() {
+            const list = document.getElementById('priorityList');
+            const items = Array.from(list.children);
+            const originalTickets = loadTickets();
+            
+            // Cria uma nova lista na ordem em que estão os itens na tela
+            const reorderedTickets = items.map(item => {
+                const id = item.getAttribute('data-id');
+                return originalTickets.find(t => t.id == id);
+            }).filter(t => t); 
+
+            saveTickets(reorderedTickets);
+            renderList(); // Renderiza novamente para limpar qualquer estilo de arraste/solta
+        }
+
+
+        // --- Funções de Estatísticas ---
+
+        function updateStats() {
+            const tickets = loadTickets();
+            const doneTickets = tickets.filter(t => t.done && t.doneDate);
+
+            const today = getTodayKey();
+            const thisWeek = getWeekKey(new Date());
+            const thisMonth = getMonthKey(new Date());
+
+            let todayCount = 0;
+            let weekCount = 0;
+            let monthCount = 0;
+            
+            doneTickets.forEach(ticket => {
+                const doneDate = new Date(ticket.doneDate);
+                const ticketWeek = getWeekKey(doneDate);
+                const ticketMonth = getMonthKey(doneDate);
+
+                if (doneDate.toLocaleDateString('pt-BR') === today) {
+                    todayCount++;
+                }
+                if (ticketWeek === thisWeek) {
+                    weekCount++;
+                }
+                if (ticketMonth === thisMonth) {
+                    monthCount++;
+                }
+            });
+
+            document.getElementById('todayCount').textContent = todayCount;
+            document.getElementById('weekCount').textContent = weekCount;
+            document.getElementById('monthCount').textContent = monthCount;
+
+            if (ADM_USERS.includes(CURRENT_USER.toUpperCase())) { // Verifica se é ADM
+                renderAdmStats(thisMonth);
+            }
+        }
+
+        // --- Funções ADM ---
+
+        function getAllUsers() {
+            const allKeys = Object.keys(localStorage);
+            return allKeys
+                .filter(key => key.startsWith(PRIORITY_STORAGE_PREFIX))
+                .map(key => key.replace(PRIORITY_STORAGE_PREFIX, '').replace(/_/g, ' '));
+        }
+
+        function renderAdmStats(currentMonthKey) {
+            const admTableBody = document.getElementById('admTableBody');
+            admTableBody.innerHTML = '';
+            
+            const allUserNames = getAllUsers();
+            const summary = [];
+
+            allUserNames.forEach(userNameKey => {
+                const userTicketsKey = PRIORITY_STORAGE_PREFIX + userNameKey.replace(/\s/g, '_');
+                const storedTickets = localStorage.getItem(userTicketsKey);
+                const tickets = storedTickets ? JSON.parse(storedTickets) : [];
+
+                // Filtra tickets que foram priorizados OU atendidos neste mês
+                const relevantTickets = tickets.filter(t => {
+                    // ID do ticket é a data de criação
+                    const creationDate = new Date(t.id);
+                    const ticketMonth = getMonthKey(creationDate); 
+                    
+                    const doneDate = t.doneDate ? new Date(t.doneDate) : null;
+                    const doneMonth = doneDate ? getMonthKey(doneDate) : null;
+                    
+                    return ticketMonth === currentMonthKey || doneMonth === currentMonthKey;
+                });
+                
+                // Calculando Totais
+                let totalPrioritized = 0;
+                let totalAttended = 0;
+
+                relevantTickets.forEach(t => {
+                    const creationDate = new Date(t.id);
+                    const ticketMonth = getMonthKey(creationDate); 
+                    
+                    // Conta como priorizado se foi criado neste mês
+                    if (ticketMonth === currentMonthKey) {
+                        totalPrioritized++;
+                    }
+                    // Conta como atendido se foi concluído neste mês
+                    if (t.done && t.doneDate) {
+                        const doneMonth = getMonthKey(new Date(t.doneDate));
+                        if (doneMonth === currentMonthKey) {
+                            totalAttended++;
+                        }
+                    }
+                });
+
+                const completionRate = totalPrioritized > 0 ? (totalAttended / totalPrioritized) * 100 : 0;
+
+                summary.push({
+                    user: userNameKey,
+                    prioritized: totalPrioritized,
+                    attended: totalAttended,
+                    rate: completionRate.toFixed(1)
+                });
+            });
+
+            // Ordena pelo total de atendidos (decrescente)
+            summary.sort((a, b) => b.attended - a.attended);
+            
+            summary.forEach(data => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${data.user}</td>
+                    <td>${data.prioritized}</td>
+                    <td>${data.attended}</td>
+                    <td>${data.rate}%</td>
+                `;
+                admTableBody.appendChild(tr);
+            });
+        }
+
+        // --- Inicialização ---
+
+        function initPage() {
+            // Tenta obter o usuário logado da página principal
+            const lastUser = localStorage.getItem('lastUser');
+            if (lastUser) {
+                // Formata o nome do usuário para a exibição e uso na chave
+                CURRENT_USER = lastUser; 
+                document.getElementById('userNameDisplay').textContent = 'Usuário: ' + CURRENT_USER;
+            } else {
+                // Se não houver usuário, volta para a página principal (simulação de login)
+                alert('Usuário não identificado. Redirecionando para o login.');
+                // window.location.href = 'index.html'; 
+                // Para testes, mantemos no "Visitante" se a linha de cima for comentada
+                // CURRENT_USER = 'Visitante';
+                // document.getElementById('userNameDisplay').textContent = 'Usuário: ' + CURRENT_USER + ' (Não Logado)';
+                return;
+            }
+
+            // Configura a visibilidade do painel ADM
+            if (ADM_USERS.includes(CURRENT_USER.toUpperCase())) {
+                document.getElementById('admStats').style.display = 'block';
+            } else {
+                document.getElementById('admStats').style.display = 'none';
+            }
+
+            // Renderiza e Atualiza
+            renderList();
+            updateStats();
+        }
+
+        window.onload = initPage;
+    </script>
+</body>
+</html>
