@@ -5,7 +5,7 @@
     <title>Automatização - Gestão de Usuários</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        /* Estilos Base (MESMO CSS DO OUTRO ARQUIVO) */
+        /* Estilos Base */
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             padding: 30px; 
@@ -19,7 +19,7 @@
             border-radius: 12px;
             box-shadow: 0 10px 25px rgba(0,0,0,0.1);
             border-top: 5px solid #0070d2;
-            position: relative; 
+            position: relative; /* Necessário para posicionar o link de voltar */
         }
         
         h1 { color: #1a1a1a; font-size: 2.2em; margin-bottom: 5px; text-align: center; }
@@ -78,16 +78,24 @@
             cursor: not-allowed;
         }
 
-        /* Link para voltar */
+        /* Link para voltar (AJUSTADO: Posicionamento e Borda Removida) */
         .back-link {
-            display: inline-block;
-            margin-bottom: 20px;
-            color: #0070d2;
+            position: absolute; /* Para posicionar acima do título */
+            top: 25px; 
+            left: 25px;
             text-decoration: none;
+            color: #0070d2;
             font-weight: 600;
-            font-size: 1.1em;
+            font-size: 0.9em; /* Ajustado para 0.9em para manter consistência com prioridades.html */
+            padding: 5px 10px;
+            border: none; /* Borda Removida */
+            border-radius: 4px;
+            transition: background-color 0.2s;
         }
-        .back-link:hover { text-decoration: underline; }
+        .back-link:hover { 
+            text-decoration: underline; 
+            background-color: #e6f7ff;
+        }
         #adminMessage {
             text-align: center;
             font-weight: bold;
@@ -103,8 +111,7 @@
         
         <div class="tool-section">
             
-            <!-- LINK PARA VOLTAR PARA A PÁGINA PRINCIPAL -->
-            <a href="index.html" class="back-link">&larr; Voltar para Solicitações</a>
+            <a href="index.html" class="back-link">&larr; Voltar para Gestão de Solicitações</a>
             
             <div class="user-management-form">
                 <input type="text" id="newUserName" placeholder="Nome do Novo Usuário (Ex: Joao Silva)" required>
@@ -115,8 +122,7 @@
 
             <h3>Usuários Atuais</h3>
             <ul id="userListContainer">
-                <!-- Lista de usuários será preenchida pelo JS -->
-            </ul>
+                </ul>
         </div>
     </div>
     
@@ -246,4 +252,3 @@
     </script>
 </body>
 </html>
-
