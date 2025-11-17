@@ -211,7 +211,7 @@
 
         <h3>Adicionar Novo Chamado</h3>
         <div class="input-form">
-            <input type="text" id="ticketInput" placeholder="Ex: EXP-45728, SUP-123456" pattern="[A-Z]{3}-\d{5,6}" title="O formato deve ser XXX-12345 ou XXX-123456" required>
+            <input type="text" id="ticketInput" placeholder="Ex: SUP-12345, EXP-4567890" pattern="[A-Z]{3,5}-\d{4,7}" title="O formato deve ser XXX-1234 ou XXXXX-1234567" required>
             <button onclick="addTicket()">Adicionar</button>
         </div>
         <div id="formMessage" style="color: red; text-align: center; margin-bottom: 10px;"></div>
@@ -303,8 +303,9 @@
             const message = document.getElementById('formMessage');
             const title = input.value.trim().toUpperCase();
 
-            if (!title || !/^[A-Z]{3}-\d{5,6}$/.test(title)) {
-                message.textContent = 'Formato inválido. Use XXX-12345 ou XXX-123456.';
+            // CORREÇÃO 2: Regex flexibilizado para 3-5 letras e 4-7 dígitos
+            if (!title || !/^[A-Z]{3,5}-\d{4,7}$/.test(title)) {
+                message.textContent = 'Formato inválido. Use 3 a 5 letras (XXX-), seguidas de 4 a 7 dígitos (1234-1234567).';
                 return;
             }
 
@@ -356,7 +357,7 @@
             updateStats();
         }
         
-        // NOVO: Lógica de reordenação automática ao mudar o status
+        // Lógica de reordenação automática ao mudar o status
         function reorderOnStatusChange(id, isDone) {
             let tickets = loadTickets();
             const ticketIndex = tickets.findIndex(t => t.id == id);
@@ -366,10 +367,10 @@
             const ticket = tickets.splice(ticketIndex, 1)[0];
             
             if (isDone) {
-                // CORREÇÃO 3: Se FINALIZADO, vai para o FIM da lista
+                // Se FINALIZADO, vai para o FIM da lista (mantém a prioridade dos pendentes no topo)
                 tickets.push(ticket);
             } else {
-                // CORREÇÃO 3: Se voltando para PENDENTE, vai para o INÍCIO da lista
+                // Se voltando para PENDENTE, vai para o INÍCIO da lista (volta a ser prioridade)
                 tickets.unshift(ticket);
             }
 
