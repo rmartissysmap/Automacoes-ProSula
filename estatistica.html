@@ -151,7 +151,6 @@
                 <select id="chartTypeSelect" onchange="renderCharts()">
                     <option value="bar">Barra</option>
                     <option value="line">Linha</option>
-                    <option value="pie">Pizza</option>
                     </select>
             </div>
 
@@ -503,6 +502,7 @@
                         y: {
                             beginAtZero: true,
                             title: { display: true, text: 'Contagem' },
+                            // Oculta o eixo Y principal se for pizza/doughnut
                             display: (finalChartType !== 'pie' && finalChartType !== 'doughnut') 
                         },
                         y1: { // Eixo Y secundário (apenas para a linha de percentual no modo combo)
@@ -516,6 +516,7 @@
                             ticks: { callback: function(value) { return value + "%" } }
                         },
                         x: {
+                            // Oculta o eixo X se for pizza/doughnut
                             display: (finalChartType !== 'pie' && finalChartType !== 'doughnut') 
                         }
                     }
