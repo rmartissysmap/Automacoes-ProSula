@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>ADM - Estatísticas de Prioridades</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 30px;
+            background-color: #e9eef2;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            border-top: 5px solid #c53929; /* Cor ADM */
+            position: relative;
+        }
+        h1 { color: #1a1a1a; font-size: 2.2em; margin-bottom: 5px; text-align: center; }
+        h2 { color: #6a6a6a; font-size: 1.2em; font-weight: 300; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; margin-top: 0; margin-bottom: 30px; text-align: center; }
+        
+        /* Link de Voltar */
+        .back-link {
+            position: absolute;
+            top: 30px;
+            left: 30px;
+            text-decoration: none;
+            color: #0070d2;
+            font-weight: 600;
+            font-size: 0.9em;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+        .back-link:hover { 
+            text-decoration: underline; 
+            background-color: #e6f7ff;
+        }
+        
+        /* Controles de Filtro */
+        #filterControl {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #d0d0d0;
+            border-radius: 8px;
+            background-color: #f5f5f5;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        #filterControl label {
+            font-weight: 600;
+            color: #333;
+        }
+        #filterControl select {
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            width: 200px;
+        }
+
+        /* Tabela ADM */
+        #admTableContainer {
+            margin-top: 30px;
+            padding: 20px;
+            border: 1px solid #d0d0d0;
+            border-radius: 8px;
+            background-color: #fff;
+        }
+        #admTable {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9em;
+        }
+        #admTable th, #admTable td {
+            padding: 10px;
+            border: 1px solid #e0e0e0;
+            text-align: left;
+        }
+        #admTable th {
+            background-color: #0070d2;
+            color: white;
+            font-weight: 600;
+        }
+        
+        /* Área de Gráficos */
+        #chartArea {
+            margin-top: 40px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+        .chart-box {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            min-height: 350px;
+        }
+        .chart-box h3 {
+             color: #0070d2;
+             text-align: center;
+             margin-top: 0;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        
+        <a href="index.html" class="back-link">&larr; Voltar para Gestão de Solicitações</a>
+        
+        <h1>ADM - Estatísticas de Prioridades</h1>
+        <h2>Visão Geral Mensal de Atendimentos e Pendências</h2>
+        
+        <div id="mainContent">
+            
+            <div id="filterControl">
+                <label for="userFilterSelect">Filtrar por Usuário (Gráficos):</label>
+                <select id="userFilterSelect" onchange="filterCharts()">
+                    <option value="ALL">Mostrar Todos</option>
+                    </select>
+            </div>
+
+            <div id="chartArea">
+                <div class="chart-box">
+                    <h3>Gráfico 1: % Conclusão (Pizza/Doughnut)</h3>
+                    <canvas id="chartPizza"></canvas>
+                    <p style="text-align: center; color: #6a6a6a;">(Integração com biblioteca de gráficos necessária)</p>
+                </div>
+                <div class="chart-box">
+                    <h3>Gráfico 2: Desempenho Mensal (Combo Chart)</h3>
+                    <canvas id="chartCombo"></canvas>
+                    <p style="text-align: center; color: #6a6a6a;">(Integração com biblioteca de gráficos necessária)</p>
+                </div>
+            </div>
+
+            <div id="admTableContainer">
+                <h3>Resumo Mensal de Chamados Priorizados por Usuário</h3>
+                <div style="overflow-x: auto;">
+                    <table id="admTable">
+                        <thead>
+                            <tr>
+                                <th>Usuário</th>
+                                <th>Total Priorizado (Mês)</th>
+                                <th>Total Atendido (Mês)</th>
+                                <th>% Conclusão</th>
+                                <th>% Pendente</th> 
+                            </tr>
+                        </thead>
+                        <tbody id="admTableBody">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // Chaves e Constantes
+        const PRIORITY_STORAGE_PREFIX = 'userPriorities_';
+        const USER_STORAGE_KEY = 'automationUserList'; 
+        const ADM_USERS = ['ADM'];
+
+        // --- UTILS ---
+
+        function formatName(name) {
+            if (!name) return '';
+            let cleanedName = name.trim().toLowerCase();
+            return cleanedName.split(' ').map(word => {
+                if (word.length === 0) return '';
+                if (word.length > 2 || word === cleanedName.split(' ')[0]) {
+                    return word.charAt(0).toUpperCase() + word.slice(1);
+                }
+                return word;
+            }).join(' ');
+        }
+        
+        function isAdm(user) {
+             return ADM_USERS.includes(formatName(user).toUpperCase());
+        }
+        
+        function getMonthKey(date) { 
+            return `${new Date(date).getMonth() + 1}/${new Date(date).getFullYear()}`; 
+        }
+
+        // --- FUNÇÕES DE PERSISTÊNCIA E CARREGAMENTO DE DADOS ---
+        
+        function loadTickets(userName) {
+            const key = PRIORITY_STORAGE_PREFIX + formatName(userName).replace(/\s/g, '_');
+            const stored = localStorage.getItem(key);
+            return stored ? JSON.parse(stored) : [];
+        }
+
+        function loadAllUsers() {
+            let users = localStorage.getItem(USER_STORAGE_KEY);
+            return users ? JSON.parse(users).filter(u => u.toUpperCase() !== 'SELECIONE SEU NOME...') : [];
+        }
+
+        function getAllUsersForAdminTable() {
+            const users = loadAllUsers();
+            return users.map(formatName);
+        }
+
+        function populateUserFilter() {
+            const select = document.getElementById('userFilterSelect');
+            const users = loadAllUsers().filter(u => u.toUpperCase() !== 'ADM').map(formatName).sort();
+            
+            users.forEach(user => {
+                const option = document.createElement('option');
+                option.value = user;
+                option.textContent = user;
+                select.appendChild(option);
+            });
+        }
+        
+        // --- FUNÇÕES DE ESTATÍSTICAS E RENDERING ---
+
+        function renderAdmStats() {
+            const admTableBody = document.getElementById('admTableBody');
+            admTableBody.innerHTML = '';
+            
+            const currentMonthKey = getMonthKey(new Date());
+            const allUserNames = getAllUsersForAdminTable();
+            const summary = [];
+
+            allUserNames.forEach(userNameKey => {
+                const tickets = loadTickets(userNameKey);
+
+                // Lógica de cálculo 
+                let totalPrioritized = 0;
+                let totalAttended = 0;
+                
+                tickets.forEach(t => {
+                    const creationDate = new Date(t.id);
+                    const ticketMonth = getMonthKey(creationDate); 
+                    
+                    if (ticketMonth === currentMonthKey) {
+                        totalPrioritized++;
+                    }
+                    
+                    if (t.done && t.doneDate) {
+                        const doneMonth = getMonthKey(new Date(t.doneDate));
+                        if (doneMonth === currentMonthKey) {
+                            totalAttended++;
+                        }
+                    }
+                });
+
+                // CÁLCULO DAS PORCENTAGENS
+                const completionRate = totalPrioritized > 0 ? (totalAttended / totalPrioritized) * 100 : 0;
+                const percentagePending = totalPrioritized > 0 ? (100 - completionRate) : 0;
+
+
+                summary.push({
+                    user: userNameKey,
+                    prioritized: totalPrioritized,
+                    attended: totalAttended,
+                    rate: completionRate.toFixed(1),
+                    pendingRate: percentagePending.toFixed(1)
+                });
+            });
+
+            // Ordena pelo total de atendidos (decrescente)
+            summary.sort((a, b) => b.attended - a.attended);
+            
+            // Renderiza a lista de usuários na tabela
+            summary.forEach(data => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${data.user}</td>
+                    <td>${data.prioritized}</td>
+                    <td>${data.attended}</td>
+                    <td>${data.rate}%</td>
+                    <td>${data.pendingRate}%</td>
+                `;
+                admTableBody.appendChild(tr);
+            });
+        }
+        
+        // Função placeholder para filtros de gráficos
+        function filterCharts() {
+            const selectedUser = document.getElementById('userFilterSelect').value;
+            console.log("Filtrando gráficos para:", selectedUser);
+            // Lógica para renderizar gráficos Chart.js com base no selectedUser
+            // Se selectedUser == 'ALL', mostra o resumo de todos.
+            // Se for um nome de usuário, mostra o desempenho individual.
+        }
+
+        // --- INICIALIZAÇÃO ---
+
+        window.onload = () => {
+            const lastUser = localStorage.getItem('lastUser');
+            let loggedUser = lastUser ? formatName(lastUser) : 'Visitante';
+
+            if (!isAdm(loggedUser)) {
+                document.body.innerHTML = '<div id="accessDenied" class="container">Acesso negado. Esta área é restrita a usuários ADM.</div>';
+                return;
+            }
+            
+            // Se for ADM, inicia a renderização dos dados
+            populateUserFilter();
+            renderAdmStats();
+            // filterCharts(); // Chama para iniciar a renderização dos gráficos (futuramente)
+        };
+    </script>
+</body>
+</html>
