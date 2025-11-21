@@ -220,7 +220,7 @@
             margin-top: 30px;
             padding-top: 20px;
             border-top: 1px solid #0070d2;
-            display: none; /* CORRIGIDO: Começa oculto e o JS exibe se for ADM */
+            display: none; /* Começa oculto e o JS exibe se for ADM */
         }
         #admStats h3 {
             color: #0070d2;
@@ -330,7 +330,6 @@
         const HIERARCHY = {
             'LUCAS': 'DIEGO',
             'NEDSON': 'VINICIUS'
-            // Matheus não tem júnior mapeado, mas a estrutura deve estar pronta
         };
 
         const SENIORS = ['DIEGO', 'VINICIUS', 'MATHEUS'];
@@ -394,13 +393,13 @@
             }
 
             if (!title || !/^[A-Z]{3,5}-\d{4,7}$/.test(title)) {
-                message.textContent = 'Formato inválido. Use 3 a 5 letras (XXX-), seguidas de 4 a 7 dígitos (1234-1234567).';
+                showMessage('Formato inválido. Use 3 a 5 letras (XXX-), seguidas de 4 a 7 dígitos (1234-1234567).');
                 return;
             }
 
             const tickets = loadTickets(LOGGED_IN_USER);
             if (tickets.some(t => t.title === title)) {
-                message.textContent = `O chamado ${title} já está na sua lista de prioridades.`;
+                showMessage(`O chamado ${title} já está na sua lista de prioridades.`);
                 return;
             }
 
@@ -723,6 +722,7 @@
             document.getElementById('monthCount').textContent = monthCount;
 
             if (isAdm(LOGGED_IN_USER)) {
+                // CHAMA A FUNÇÃO DE ESTATÍSTICAS ADM AQUI
                 renderAdmStats(thisMonth);
             }
         }
@@ -776,22 +776,23 @@
 
         // --- Funções ADM (Estatísticas e Renderização) ---
 
-        function getAllUsers() {
-            const allKeys = Object.keys(localStorage);
-            return allKeys
-                .filter(key => key.startsWith(PRIORITY_STORAGE_PREFIX))
-                .map(key => key.replace(PRIORITY_STORAGE_PREFIX, '').replace(/_/g, ' '));
+        // CORRIGIDO: Retorna TODOS os usuários para o ADM (para popular a tabela)
+        function getAllUsersForAdminTable() {
+            const users = loadAllUsers();
+            // Retorna todos os usuários (exceto o 'Selecione seu Nome...') para calcular estatísticas
+            return users.map(formatName);
         }
 
         function renderAdmStats(currentMonthKey) {
             const admTableBody = document.getElementById('admTableBody');
             admTableBody.innerHTML = '';
             
-            const allUserNames = getAllUsers();
+            // Usa a função que retorna todos os usuários para o cálculo
+            const allUserNames = getAllUsersForAdminTable();
             const summary = [];
 
             allUserNames.forEach(userNameKey => {
-                const userTicketsKey = PRIORITY_STORAGE_PREFIX + userNameKey.replace(/\s/g, '_');
+                const userTicketsKey = getStorageKey(userNameKey); // Usa a chave de armazenamento formatada
                 const storedTickets = localStorage.getItem(userTicketsKey);
                 const tickets = storedTickets ? JSON.parse(storedTickets) : [];
 
@@ -881,7 +882,7 @@
 
             // Configura a visibilidade do painel ADM e de transferência
             if (isAdm(LOGGED_IN_USER)) {
-                 document.getElementById('admStats').style.display = 'block'; // CORRIGIDO: Exibe se for ADM
+                 document.getElementById('admStats').style.display = 'block'; // Exibe se for ADM
                  document.getElementById('transferSection').style.display = 'flex';
                  populateTransferSelects(viewableUsers);
             } else {
