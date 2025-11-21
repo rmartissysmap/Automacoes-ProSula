@@ -53,16 +53,18 @@
             display: flex;
             gap: 15px;
             align-items: center;
+            flex-wrap: wrap; /* Permite quebrar em telas menores */
         }
         #filterControl label {
             font-weight: 600;
             color: #333;
+            white-space: nowrap;
         }
         #filterControl select {
             padding: 8px;
             border-radius: 4px;
             border: 1px solid #ccc;
-            width: 200px;
+            width: 180px;
         }
 
         /* Tabela ADM */
@@ -102,7 +104,7 @@
             border-radius: 8px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
             min-height: 350px;
-            position: relative; /* Para Chart.js */
+            position: relative; 
         }
         .chart-box h3 {
              color: #0070d2;
@@ -134,32 +136,46 @@
         <div id="mainContent" style="display: none;">
             
             <div id="filterControl">
+                <label for="periodSelect">Período de Análise:</label>
+                <select id="periodSelect" onchange="renderAdmStats(); renderCharts();">
+                    <option value="MONTH">Mês Atual</option>
+                    <option value="WEEK">Semana Atual</option>
+                </select>
+                
                 <label for="userFilterSelect">Filtrar por Usuário (Gráficos):</label>
                 <select id="userFilterSelect" onchange="renderCharts()">
                     <option value="ALL">Mostrar Todos</option>
                     </select>
+
+                <label for="chartTypeSelect">Tipo Gráfico 2:</label>
+                <select id="chartTypeSelect" onchange="renderCharts()">
+                    <option value="bar">Barra</option>
+                    <option value="line">Linha</option>
+                    <option value="pie">Pizza</option>
+                    <option value="doughnut">Doughnut</option>
+                </select>
             </div>
 
             <div id="chartArea">
                 <div class="chart-box">
-                    <h3>Gráfico 1: % Conclusão (Pizza/Doughnut)</h3>
+                    <h3>Gráfico 1: (Atendimento/Pendente)</h3>
                     <canvas id="chartPizza"></canvas>
                 </div>
                 <div class="chart-box">
-                    <h3>Gráfico 2: Desempenho Mensal (Barra/Combo)</h3>
+                    <h3 id="comboChartTitle">Gráfico 2: Desempenho (Mensal)</h3>
                     <canvas id="chartCombo"></canvas>
                 </div>
             </div>
 
             <div id="admTableContainer">
-                <h3>Resumo Mensal de Chamados Priorizados por Usuário</h3>
+                <h3>Resumo de Chamados Priorizados por Usuário</h3>
                 <div style="overflow-x: auto;">
                     <table id="admTable">
                         <thead>
                             <tr>
                                 <th>Usuário</th>
-                                <th>Total Priorizado (Mês)</th>
-                                <th>Total Atendido (Mês)</th>
+                                <th>Total Priorizado (<span id="tablePeriod">Mês</span>)</th>
+                                <th>Total Atendido (<span id="tablePeriod2">Mês</span>)</th>
                                 <th>% Conclusão</th>
                                 <th>% Pendente</th> 
                             </tr>
@@ -208,6 +224,16 @@
             return `${new Date(date).getMonth() + 1}/${new Date(date).getFullYear()}`; 
         }
 
+        // NOVO: Função para obter a chave Semanal
+        function getWeekKey(date) {
+            const d = new Date(date);
+            const day = d.getDay(); 
+            const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Ajusta para Segunda-feira
+            const startOfWeek = new Date(d.setDate(diff));
+            return startOfWeek.toLocaleDateString('pt-BR');
+        }
+
+
         // --- FUNÇÕES DE PERSISTÊNCIA E CARREGAMENTO DE DADOS ---
         
         function loadTickets(userName) {
@@ -241,7 +267,29 @@
         // --- FUNÇÕES DE CÁLCULO GERAL (BASE DE DADOS PARA TABELA E GRÁFICOS) ---
 
         function getMonthlySummaryData() {
-            const currentMonthKey = getMonthKey(new Date());
+            const periodType = document.getElementById('periodSelect').value;
+            const currentDate = new Date();
+            
+            let periodKeyGetter;
+            let currentPeriodKey;
+            let periodLabel;
+
+            if (periodType === 'WEEK') {
+                periodKeyGetter = getWeekKey;
+                currentPeriodKey = getWeekKey(currentDate);
+                periodLabel = 'Semana';
+            } else { // MONTH (Padrão)
+                periodKeyGetter = getMonthKey;
+                currentPeriodKey = getMonthKey(currentDate);
+                periodLabel = 'Mês';
+            }
+
+            // Atualiza o texto na tabela
+            document.getElementById('tablePeriod').textContent = periodLabel;
+            document.getElementById('tablePeriod2').textContent = periodLabel;
+            document.getElementById('comboChartTitle').textContent = `Gráfico 2: Desempenho (${periodLabel})`;
+
+            
             const allUserNames = getAllUsersForAdminTable();
             const summary = [];
 
@@ -253,15 +301,17 @@
                 
                 tickets.forEach(t => {
                     const creationDate = new Date(t.id);
-                    const ticketMonth = getMonthKey(creationDate); 
+                    const ticketPeriod = periodKeyGetter(creationDate);
                     
-                    if (ticketMonth === currentMonthKey) {
+                    if (ticketPeriod === currentPeriodKey) {
                         totalPrioritized++;
                     }
                     
                     if (t.done && t.doneDate) {
-                        const doneMonth = getMonthKey(new Date(t.doneDate));
-                        if (doneMonth === currentMonthKey) {
+                        const doneDate = new Date(t.doneDate);
+                        const donePeriod = periodKeyGetter(doneDate);
+                        
+                        if (donePeriod === currentPeriodKey) {
                             totalAttended++;
                         }
                     }
@@ -311,33 +361,34 @@
 
         function renderCharts() {
             const selectedUser = document.getElementById('userFilterSelect').value;
+            const selectedChartType = document.getElementById('chartTypeSelect').value;
             const summaryData = getMonthlySummaryData();
             
-            let usersToChart = [];
+            let chartData = summaryData;
+            
+            // 1. FILTRO DE DADOS
+            if (selectedUser !== 'ALL') {
+                chartData = summaryData.filter(d => d.user === selectedUser);
+            }
+            
             let totalCompleted = 0;
             let totalPending = 0;
 
+            // Se o filtro for ALL ou um único usuário, calcula os totais para o PIZZA CHART
             if (selectedUser === 'ALL') {
-                // Se 'Mostrar Todos', soma os totais para o gráfico de pizza
-                summaryData.forEach(data => {
+                 chartData.forEach(data => {
                     totalCompleted += parseFloat(data.attended);
-                    // O total pendente deve ser calculado sobre o total priorizado no mês:
                     totalPending += (parseFloat(data.prioritized) - parseFloat(data.attended));
                 });
-                usersToChart = summaryData; // Usa todos para o Combo Chart (se implementado)
-            } else {
-                // Se usuário específico, calcula % sobre a performance dele
-                const userData = summaryData.find(d => d.user === selectedUser);
-                if (userData) {
-                    totalCompleted = parseFloat(userData.attended);
-                    totalPending = parseFloat(userData.prioritized) - totalCompleted;
-                    usersToChart = [userData];
-                }
+            } else if (chartData.length === 1) {
+                 totalCompleted = parseFloat(chartData[0].attended);
+                 totalPending = parseFloat(chartData[0].prioritized) - totalCompleted;
             }
             
-            // 1. Gráfico de Pizza/Doughnut (% Conclusão)
+            if (totalPending < 0) totalPending = 0; 
             
-            // Destrói instância anterior se existir
+            // 2. Gráfico de Pizza/Doughnut (Gráfico 1)
+            
             if (pizzaChartInstance) {
                 pizzaChartInstance.destroy();
             }
@@ -346,10 +397,10 @@
             pizzaChartInstance = new Chart(ctxPizza, {
                 type: 'doughnut',
                 data: {
-                    labels: ['Atendido', 'Pendente'],
+                    labels: ['Atendido (Total)', 'Pendente (Total)'],
                     datasets: [{
                         data: [totalCompleted, totalPending],
-                        backgroundColor: ['#28a745', '#ffc107'], // Verde e Amarelo
+                        backgroundColor: ['#28a745', '#ffc107'], 
                         hoverBackgroundColor: ['#218838', '#e0a800']
                     }]
                 },
@@ -357,13 +408,13 @@
                     responsive: true,
                     plugins: {
                         legend: { position: 'top' },
-                        title: { display: false }
+                        title: { display: true, text: `Status Geral de Chamados do Período` }
                     }
                 }
             });
 
 
-            // 2. Gráfico Combo Chart (Desempenho Mensal)
+            // 3. Gráfico Combo Chart (Gráfico 2)
             
             if (comboChartInstance) {
                 comboChartInstance.destroy();
@@ -371,40 +422,77 @@
             
             const ctxCombo = document.getElementById('chartCombo').getContext('2d');
             
-            // Dados para o Combo Chart (usaremos apenas os dados do mês atual para simplicidade)
-            const comboLabels = usersToChart.map(u => u.user);
-            const comboAttended = usersToChart.map(u => u.attended);
-            const comboPrioritized = usersToChart.map(u => u.prioritized);
-            const comboRate = usersToChart.map(u => u.rate);
+            const comboLabels = chartData.map(u => u.user);
+            const comboAttended = chartData.map(u => u.attended);
+            const comboPrioritized = chartData.map(u => u.prioritized);
+            const comboRate = chartData.map(u => u.rate);
+            
+            let comboChartType = selectedChartType;
+            let comboDatasets;
+
+            // Se o tipo selecionado for PIZZA ou DOUGHNUT, ajustamos os datasets
+            if (selectedChartType === 'pie' || selectedChartType === 'doughnut') {
+                // Para gráficos de pizza, usamos os totais do PIZZA CHART, mas apenas para o caso de um único usuário
+                // Se for ALL, usamos o total geral.
+                
+                const totalP = (selectedUser === 'ALL') ? totalCompleted + totalPending : parseFloat(chartData[0].prioritized);
+                const totalA = (selectedUser === 'ALL') ? totalCompleted : parseFloat(chartData[0].attended);
+                const totalPen = totalP - totalA;
+
+                comboDatasets = [
+                    {
+                        data: [totalA, totalPen],
+                        backgroundColor: ['#28a745', '#ffc107'],
+                        hoverBackgroundColor: ['#218838', '#e0a800']
+                    }
+                ];
+                comboLabels = ['Atendido', 'Pendente']; // Labels genéricas
+                
+            } else { // Tipos Barra, Linha (Usamos 3 datasets)
+                comboDatasets = [
+                    {
+                        label: 'Total Priorizado (Período)',
+                        type: 'bar',
+                        backgroundColor: '#0070d2',
+                        data: comboPrioritized,
+                    },
+                    {
+                        label: 'Total Atendido (Período)',
+                        type: 'bar',
+                        backgroundColor: '#28a745',
+                        data: comboAttended,
+                    },
+                    {
+                        label: '% Conclusão',
+                        type: 'line',
+                        data: comboRate,
+                        borderColor: '#c53929',
+                        borderWidth: 2,
+                        fill: false,
+                        yAxisID: 'y1' 
+                    }
+                ];
+                // Se o tipo for 'line', removemos o type: 'bar' dos primeiros datasets (Chart.js é inteligente, mas setamos a linha explicitly)
+                if (selectedChartType === 'line') {
+                    comboDatasets[0].type = 'line';
+                    comboDatasets[1].type = 'line';
+                    comboDatasets[0].borderColor = '#0070d2';
+                    comboDatasets[1].borderColor = '#28a745';
+                    comboDatasets[0].backgroundColor = 'rgba(0, 112, 210, 0.2)'; // Fundo leve
+                    comboDatasets[1].backgroundColor = 'rgba(40, 167, 69, 0.2)';
+                    comboDatasets[0].fill = true;
+                    comboDatasets[1].fill = true;
+                } else {
+                    comboChartType = 'bar'; // Garante que volte a ser barra se for combo
+                }
+            }
 
 
             comboChartInstance = new Chart(ctxCombo, {
-                type: 'bar', // Tipo padrão é barra
+                type: comboChartType, 
                 data: {
                     labels: comboLabels,
-                    datasets: [
-                        {
-                            label: 'Total Priorizado (Mês)',
-                            type: 'bar',
-                            backgroundColor: '#0070d2',
-                            data: comboPrioritized,
-                        },
-                        {
-                            label: 'Total Atendido (Mês)',
-                            type: 'bar',
-                            backgroundColor: '#28a745',
-                            data: comboAttended,
-                        },
-                        {
-                            label: '% Conclusão',
-                            type: 'line',
-                            data: comboRate,
-                            borderColor: '#c53929',
-                            borderWidth: 2,
-                            fill: false,
-                            yAxisID: 'y1' // Eixo Y secundário para percentual
-                        }
-                    ]
+                    datasets: comboDatasets
                 },
                 options: {
                     responsive: true,
@@ -415,25 +503,23 @@
                     scales: {
                         y: {
                             beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: 'Contagem'
-                            }
+                            title: { display: true, text: 'Contagem' },
+                            // Oculta o eixo Y principal se for pizza/doughnut
+                            display: (selectedChartType !== 'pie' && selectedChartType !== 'doughnut') 
                         },
-                        y1: { // Eixo Y secundário para a linha de percentual
+                        y1: { // Eixo Y secundário (apenas para a linha de percentual)
                             type: 'linear',
-                            display: true,
+                            display: (selectedChartType !== 'pie' && selectedChartType !== 'doughnut'),
                             position: 'right',
                             min: 0,
                             max: 100,
-                            grid: { drawOnChartArea: false }, // Desenha apenas para o eixo principal
-                            title: {
-                                display: true,
-                                text: 'Percentual (%)'
-                            },
-                            ticks: {
-                                callback: function(value) { return value + "%" }
-                            }
+                            grid: { drawOnChartArea: false }, 
+                            title: { display: true, text: 'Percentual (%)' },
+                            ticks: { callback: function(value) { return value + "%" } }
+                        },
+                        x: {
+                             // Oculta o eixo X se for pizza/doughnut
+                            display: (selectedChartType !== 'pie' && selectedChartType !== 'doughnut') 
                         }
                     }
                 }
