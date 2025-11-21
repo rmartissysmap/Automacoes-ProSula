@@ -107,6 +107,16 @@
              text-align: center;
              margin-top: 0;
         }
+        
+        /* Estilo para tela de acesso negado */
+        #accessDenied {
+            text-align: center;
+            padding-top: 50px;
+            color: #c53929;
+            font-size: 1.5em;
+            font-weight: 600;
+            display: none;
+        }
 
     </style>
 </head>
@@ -119,7 +129,7 @@
         <h1>ADM - Estatísticas de Prioridades</h1>
         <h2>Visão Geral Mensal de Atendimentos e Pendências</h2>
         
-        <div id="mainContent">
+        <div id="mainContent" style="display: none;">
             
             <div id="filterControl">
                 <label for="userFilterSelect">Filtrar por Usuário (Gráficos):</label>
@@ -161,6 +171,10 @@
             </div>
 
         </div>
+        
+        <div id="accessDenied">
+            Acesso negado. Esta área é restrita a usuários ADM.
+        </div>
     </div>
 
     <script>
@@ -201,9 +215,9 @@
 
         function loadAllUsers() {
             let users = localStorage.getItem(USER_STORAGE_KEY);
-            return users ? JSON.parse(users).filter(u => u.toUpperCase() !== 'SELECIONE SEU NOME...') : [];
+            return users ? JSON.parse(users).filter(u => u.toUpperCase() !== 'SELECIONE SEU NOME...' && u.toUpperCase() !== 'ADM') : [];
         }
-
+        
         function getAllUsersForAdminTable() {
             const users = loadAllUsers();
             return users.map(formatName);
@@ -211,7 +225,7 @@
 
         function populateUserFilter() {
             const select = document.getElementById('userFilterSelect');
-            const users = loadAllUsers().filter(u => u.toUpperCase() !== 'ADM').map(formatName).sort();
+            const users = loadAllUsers().map(formatName).sort();
             
             users.forEach(user => {
                 const option = document.createElement('option');
@@ -290,8 +304,6 @@
             const selectedUser = document.getElementById('userFilterSelect').value;
             console.log("Filtrando gráficos para:", selectedUser);
             // Lógica para renderizar gráficos Chart.js com base no selectedUser
-            // Se selectedUser == 'ALL', mostra o resumo de todos.
-            // Se for um nome de usuário, mostra o desempenho individual.
         }
 
         // --- INICIALIZAÇÃO ---
@@ -301,14 +313,16 @@
             let loggedUser = lastUser ? formatName(lastUser) : 'Visitante';
 
             if (!isAdm(loggedUser)) {
-                document.body.innerHTML = '<div id="accessDenied" class="container">Acesso negado. Esta área é restrita a usuários ADM.</div>';
+                document.getElementById('mainContent').style.display = 'none';
+                document.getElementById('accessDenied').style.display = 'block';
                 return;
             }
             
             // Se for ADM, inicia a renderização dos dados
+            document.getElementById('mainContent').style.display = 'block';
             populateUserFilter();
             renderAdmStats();
-            // filterCharts(); // Chama para iniciar a renderização dos gráficos (futuramente)
+            // filterCharts(); 
         };
     </script>
 </body>
