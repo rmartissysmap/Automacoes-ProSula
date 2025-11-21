@@ -64,7 +64,7 @@
             width: 100%;
         }
         /* Links de Gerenciamento e Prioridades */
-        #userManagementLink, #towerManagementLink, #priorityManagementLink {
+        #userManagementLink, #towerManagementLink, #priorityManagementLink, #distribuicaoLink {
             background: none;
             border: none;
             color: #0070d2;
@@ -72,7 +72,7 @@
             padding: 2px 0; cursor: pointer; 
             font-size: 0.9em; font-weight: 600;
         }
-        #userManagementLink, #towerManagementLink {
+        #userManagementLink, #towerManagementLink, #distribuicaoLink {
             display: none; /* Oculto por padrão, JS mostra para ADM */
         }
         #logoutButton {
@@ -83,7 +83,7 @@
             padding: 2px 0; cursor: pointer; 
             font-size: 0.9em; font-weight: 600;
         }
-        #userManagementLink:hover, #logoutButton:hover, #towerManagementLink:hover, #priorityManagementLink:hover {
+        #userManagementLink:hover, #logoutButton:hover, #towerManagementLink:hover, #priorityManagementLink:hover, #distribuicaoLink:hover {
             text-decoration: underline;
         }
         /* --- FIM DO NOVO PAINEL --- */
@@ -314,6 +314,7 @@
             </div>
             <div class="user-options">
                 <a href="prioridades.html" id="priorityManagementLink">Minhas Prioridades</a>
+                <a href="distribuicao_chamados.html" id="distribuicaoLink">Distribuir Chamados</a>
                 <a href="InclusãoExclusãoUsuário.html" id="userManagementLink">Gerenciar Usuários</a>
                 <a href="torresFrentes.html" id="towerManagementLink">Gerenciar Torres</a>
                 <button id="logoutButton">Trocar Usuário</button>
@@ -579,11 +580,13 @@
             document.getElementById('userInitial').textContent = initial;
             
             const isAdm = isAuthorized(CURRENT_USER);
+            
             // Apenas ADM
             document.getElementById('userManagementLink').style.display = isAdm ?
             'block' : 'none';
             document.getElementById('towerManagementLink').style.display = isAdm ? 'block' : 'none';
-            
+            document.getElementById('distribuicaoLink').style.display = isAdm ? 'block' : 'none'; // NOVO LINK
+
             // O link de prioridades fica sempre visível
             document.getElementById('priorityManagementLink').style.display = 'block'; 
 
