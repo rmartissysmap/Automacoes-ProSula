@@ -220,6 +220,7 @@
             margin-top: 30px;
             padding-top: 20px;
             border-top: 1px solid #0070d2;
+            display: none; /* CORREÇÃO: Começa oculto e o JS exibe se for ADM */
         }
         #admStats h3 {
             color: #0070d2;
@@ -298,7 +299,7 @@
             </div>
         </div>
 
-        <div id="admStats" style="display: none;">
+        <div id="admStats">
             <h3>Resumo Mensal de Chamados Priorizados por Usuário</h3>
             <div style="overflow-x: auto;">
                 <table id="admTable">
@@ -308,7 +309,7 @@
                             <th>Total Priorizado (Mês)</th>
                             <th>Total Atendido (Mês)</th>
                             <th>% Conclusão</th>
-                        </tr>
+                            <th>% Pendente</th> </tr>
                     </thead>
                     <tbody id="admTableBody">
                         </tbody>
@@ -342,7 +343,10 @@
             let cleanedName = name.trim().toLowerCase();
             return cleanedName.split(' ').map(word => {
                 if (word.length === 0) return '';
-                return word.charAt(0).toUpperCase() + word.slice(1);
+                if (word.length > 2 || word === cleanedName.split(' ')[0]) {
+                    return word.charAt(0).toUpperCase() + word.slice(1);
+                }
+                return word;
             }).join(' ');
         }
         
@@ -373,7 +377,8 @@
         
         function loadAllUsers() {
             let users = localStorage.getItem(USER_STORAGE_KEY);
-            return users ? JSON.parse(users) : [];
+            // Filtra 'Selecione seu Nome...' para não aparecer em listas
+            return users ? JSON.parse(users).filter(u => u.toUpperCase() !== 'SELECIONE SEU NOME...') : [];
         }
 
         // --- FUNÇÕES DE CADASTRO E STATUS ---
@@ -460,10 +465,10 @@
         function getHierarchicalUsers() {
             const loggedUser = formatName(LOGGED_IN_USER).toUpperCase();
             let viewableUsers = [LOGGED_IN_USER];
-            const allUsers = loadAllUsers().filter(u => u !== 'Selecione seu Nome...');
+            const allUsers = loadAllUsers();
 
             if (isAdm(LOGGED_IN_USER)) {
-                // ADM vê todos, exceto "Selecione..."
+                // ADM vê todos
                 viewableUsers = allUsers;
 
             } else if (isSenior(LOGGED_IN_USER)) {
@@ -478,7 +483,8 @@
                     }
                 }
             }
-            return viewableUsers.map(formatName);
+            // Garante que só há nomes de usuários completos e formatados
+            return viewableUsers.map(formatName).filter((value, index, self) => self.indexOf(value) === index);
         }
 
         function populateViewSelect(viewableUsers) {
@@ -500,7 +506,7 @@
                     CURRENT_VIEW_USER = LOGGED_IN_USER;
                     defaultSet = true;
                 } else if (users.length > 1 && !defaultSet) {
-                    // Se não for o logado, mas é o primeiro da lista de supervisão
+                    // Se for o primeiro da lista visível (ex: Sênior vendo Júnior)
                     option.selected = true;
                     CURRENT_VIEW_USER = user;
                     defaultSet = true;
@@ -508,7 +514,7 @@
                 select.appendChild(option);
             });
             
-            // Se houver mais de uma opção, exibe o controle
+            // Se houver mais de uma opção, ou se for ADM, exibe o controle
             if (users.length > 1 || isAdm(LOGGED_IN_USER)) {
                 document.getElementById('viewControl').style.display = 'block';
             }
@@ -521,10 +527,10 @@
             selectTarget.innerHTML = '<option value="">Selecione Destino</option>';
             selectTicket.innerHTML = '<option value="">Selecione um Ticket</option>';
 
-            const allUsers = loadAllUsers().filter(u => formatName(u) !== CURRENT_VIEW_USER && u !== 'Selecione seu Nome...');
+            const allUsers = loadAllUsers();
             
-            // Populando destinos (todos os outros usuários)
-            allUsers.map(formatName).sort().forEach(user => {
+            // Populando destinos (todos os outros usuários, exceto o de visualização)
+            allUsers.map(formatName).sort().filter(u => u !== CURRENT_VIEW_USER).forEach(user => {
                 const option = document.createElement('option');
                 option.value = user;
                 option.textContent = user;
@@ -552,6 +558,8 @@
             if (isAdm(LOGGED_IN_USER)) {
                 document.getElementById('transferSection').style.display = 'flex';
                 populateTransferSelects(getHierarchicalUsers()); 
+            } else {
+                 document.getElementById('transferSection').style.display = 'none';
             }
             
             renderList();
@@ -677,7 +685,6 @@
             const tickets = loadTickets(CURRENT_VIEW_USER);
             const doneTickets = tickets.filter(t => t.done && t.doneDate);
 
-            // ... (Lógica de data omitida por ser a mesma) ...
             function getTodayKey() { return new Date().toLocaleDateString('pt-BR'); }
             function getWeekKey(date) { 
                 const d = new Date(date); const day = d.getDay(); 
@@ -788,15 +795,20 @@
                 const storedTickets = localStorage.getItem(userTicketsKey);
                 const tickets = storedTickets ? JSON.parse(storedTickets) : [];
 
-                // Lógica de cálculo (omito para brevidade, mas é a mesma que você já tem)
+                // Lógica de cálculo 
                 let totalPrioritized = 0;
                 let totalAttended = 0;
+                
                 tickets.forEach(t => {
                     const creationDate = new Date(t.id);
                     const ticketMonth = getMonthKey(creationDate); 
+                    
+                    // Conta o Total Priorizado (criado neste mês)
                     if (ticketMonth === currentMonthKey) {
                         totalPrioritized++;
                     }
+                    
+                    // Conta o Total Atendido (concluído neste mês)
                     if (t.done && t.doneDate) {
                         const doneMonth = getMonthKey(new Date(t.doneDate));
                         if (doneMonth === currentMonthKey) {
@@ -805,13 +817,19 @@
                     }
                 });
 
+                // CÁLCULO DAS PORCENTAGENS
                 const completionRate = totalPrioritized > 0 ? (totalAttended / totalPrioritized) * 100 : 0;
+                
+                // % Pendente é o complemento da % Conclusão (0% se Total Priorizado for 0)
+                const percentagePending = totalPrioritized > 0 ? (100 - completionRate) : 0;
+
 
                 summary.push({
                     user: userNameKey,
                     prioritized: totalPrioritized,
                     attended: totalAttended,
-                    rate: completionRate.toFixed(1)
+                    rate: completionRate.toFixed(1),
+                    pendingRate: percentagePending.toFixed(1)
                 });
             });
 
@@ -825,6 +843,7 @@
                     <td>${data.prioritized}</td>
                     <td>${data.attended}</td>
                     <td>${data.rate}%</td>
+                    <td>${data.pendingRate}%</td>
                 `;
                 admTableBody.appendChild(tr);
             });
@@ -862,9 +881,12 @@
 
             // Configura a visibilidade do painel ADM e de transferência
             if (isAdm(LOGGED_IN_USER)) {
-                 document.getElementById('admStats').style.display = 'block';
+                 document.getElementById('admStats').style.display = 'block'; // CORRIGIDO: Exibe se for ADM
                  document.getElementById('transferSection').style.display = 'flex';
                  populateTransferSelects(viewableUsers);
+            } else {
+                // Esconde a seção ADM para não ADMs
+                document.getElementById('admStats').style.display = 'none';
             }
             
             renderList();
