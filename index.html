@@ -540,7 +540,7 @@
             if (isPowerUser) {
                 const passwordInput = document.getElementById('cpfInput').value.trim().toLowerCase();
                 // --- NOVA SENHA APLICADA AQUI ---
-                if (passwordInput !== 'sysmap2025') {
+                if (passwordInput !== AUTHORIZED_PASSWORD.toLowerCase()) {
                     messageDiv.textContent = 'Senha incorreta. Acesso negado.';
                     return;
                 }
@@ -761,7 +761,7 @@
         
         function createStatusCell(req, index, canEdit) { // canEdit agora é true apenas para ADM
             const statusCell = document.createElement('td');
-            const statusClass = `status-${req.status.toLowerCase().replace(' ', '-')`;
+            const statusClass = `status-${req.status.toLowerCase().replace(' ', '-')}`;
 
             if (canEdit) {
                 const select = document.createElement('select');
