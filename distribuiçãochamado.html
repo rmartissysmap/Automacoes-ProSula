@@ -127,8 +127,10 @@
                 </div>
                 
                 <div>
-                    <label for="frenteInput">Frente</label>
-                    <input type="text" id="frenteInput" placeholder="Frente de Trabalho (Opcional)">
+                    <label for="frenteSelect">Frente</label>
+                    <select id="frenteSelect">
+                        <option value="">Selecione a Frente (Opcional)</option>
+                    </select>
                 </div>
                 
                 <button onclick="distributeTicket()">Distribuir e Priorizar Chamado</button>
@@ -144,9 +146,11 @@
     <script>
         // Chaves e Constantes
         const USER_STORAGE_KEY = 'automationUserList'; 
+        const TORRE_STORAGE_KEY = 'automationTowersList'; // CHAVE DAS TORRES/FRENTES
         const PRIORITY_STORAGE_PREFIX = 'userPriorities_'; // CHAVE DE PRIORIDADES
         const AUTHORIZED_EDITORS = ['ADM'];
         let CURRENT_USER = '';
+        let ALL_TOWERS = [];
         
         // --- UTILS ---
         
@@ -168,6 +172,12 @@
             return AUTHORIZED_EDITORS.includes(cleanUser); // Apenas 'ADM'
         }
         
+        function loadTowersData() {
+            let towers = localStorage.getItem(TORRE_STORAGE_KEY);
+            // Se não houver, usa um array vazio para não quebrar
+            ALL_TOWERS = towers ? JSON.parse(towers) : []; 
+        }
+
         function loadUsersForSelect() {
             let users = localStorage.getItem(USER_STORAGE_KEY);
             if (!users) return []; 
@@ -193,6 +203,36 @@
             });
         }
         
+        // NOVO: Preenche o Dropdown de Frentes (Combina todas as frentes de todas as torres)
+        function populateFrenteSelect() {
+            const select = document.getElementById('frenteSelect');
+            // Recarrega os dados para garantir que estão atualizados
+            loadTowersData();
+            
+            select.innerHTML = '<option value="">Selecione a Frente (Opcional)</option>';
+            
+            const allFrentes = new Map();
+
+            ALL_TOWERS.forEach(torre => {
+                torre.frentes.forEach(frente => {
+                    // Usa o nome da frente como chave para evitar duplicatas
+                    if (!allFrentes.has(frente.nome)) {
+                        allFrentes.set(frente.nome, frente.nome); 
+                    }
+                });
+            });
+            
+            const sortedFrentes = Array.from(allFrentes.keys()).sort();
+
+            sortedFrentes.forEach(frenteName => {
+                const option = document.createElement('option');
+                option.value = frenteName;
+                option.textContent = frenteName;
+                select.appendChild(option);
+            });
+        }
+
+
         // --- FUNÇÕES DE PRIORIZAÇÃO ---
         
         function getPriorityStorageKey(userName) {
@@ -226,11 +266,11 @@
         function distributeTicket() {
             const ticketInput = document.getElementById('ticketInput');
             const userSelect = document.getElementById('userSelect');
-            const frenteInput = document.getElementById('frenteInput');
+            const frenteSelect = document.getElementById('frenteSelect'); // AGORA É SELECT
             
             const ticketTitle = ticketInput.value.trim().toUpperCase();
             const selectedUser = userSelect.value.trim();
-            const frente = frenteInput.value.trim();
+            const frente = frenteSelect.value.trim(); // Pega o valor do select
             
             // 1. Validação
             if (!/^[A-Z]{3,5}-\d{4,7}$/.test(ticketTitle)) {
@@ -257,7 +297,7 @@
                 title: ticketTitle,
                 done: false,
                 doneDate: '',
-                // Adiciona a frente como um dado extra (embora não seja exibido no prioridades.html, ajuda no contexto futuro)
+                // Armazena a frente selecionada
                 frente: frente || 'N/A' 
             };
 
@@ -268,9 +308,9 @@
             saveUserTickets(selectedUser, tickets);
             
             // 7. Feedback e Limpeza
-            showMessage(`Chamado ${ticketTitle} distribuído com sucesso para ${selectedUser}.`, 'green');
+            showMessage(`Chamado ${ticketTitle} distribuído com sucesso para ${selectedUser} (Frente: ${frente || 'N/A'}).`, 'green');
             ticketInput.value = '';
-            frenteInput.value = '';
+            frenteSelect.selectedIndex = 0; // Reseta o select da frente
             userSelect.selectedIndex = 0;
         }
 
@@ -284,7 +324,11 @@
                 document.getElementById('mainContent').style.display = 'block';
                 document.getElementById('pageTitle').textContent = `ADM - Distribuição de Chamados`;
                 document.getElementById('userNameDisplay').textContent = `Usuário: ${CURRENT_USER}`;
+                
+                // Popula os selects
                 populateUserSelect();
+                populateFrenteSelect();
+
             } else {
                 document.getElementById('accessDenied').style.display = 'block';
                 document.getElementById('pageTitle').textContent = 'Acesso Restrito';
