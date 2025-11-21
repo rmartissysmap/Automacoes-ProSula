@@ -776,7 +776,7 @@
 
         // --- Funções ADM (Estatísticas e Renderização) ---
 
-        // CORRIGIDO: Retorna TODOS os usuários para o ADM (para popular a tabela)
+        // Retorna TODOS os usuários para o ADM (para popular a tabela)
         function getAllUsersForAdminTable() {
             const users = loadAllUsers();
             // Retorna todos os usuários (exceto o 'Selecione seu Nome...') para calcular estatísticas
@@ -787,7 +787,6 @@
             const admTableBody = document.getElementById('admTableBody');
             admTableBody.innerHTML = '';
             
-            // Usa a função que retorna todos os usuários para o cálculo
             const allUserNames = getAllUsersForAdminTable();
             const summary = [];
 
@@ -837,6 +836,7 @@
             // Ordena pelo total de atendidos (decrescente)
             summary.sort((a, b) => b.attended - a.attended);
             
+            // Renderiza a lista de usuários na tabela
             summary.forEach(data => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
