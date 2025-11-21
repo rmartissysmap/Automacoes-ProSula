@@ -252,7 +252,7 @@
         }
         .modal-content select, .modal-content input, .modal-content button {
             margin-top: 15px;
-            padding: 10px; w-idth: 100%;
+            padding: 10px; width: 100%;
             box-sizing: border-box; border-radius: 4px;
         }
         .modal-content select {
@@ -400,7 +400,8 @@
             'Selecione seu Nome...', 'Renan Martins', 'Vinicius', 'Matheus',
             'Diego', 'Renato', 'Lucas', 'Nedson', 'ADM'
         ];
-        const AUTHORIZED_PASSWORD = 'salmos93'; 
+        // --- SENHA ATUALIZADA AQUI ---
+        const AUTHORIZED_PASSWORD = 'sysmap2025'; 
         let CURRENT_USER = ''; 
         let ALL_TOWERS = [];
         // Armazena os dados das torres
@@ -538,7 +539,8 @@
             const formattedUserName = formatName(userName);
             if (isPowerUser) {
                 const passwordInput = document.getElementById('cpfInput').value.trim().toLowerCase();
-                if (passwordInput !== AUTHORIZED_PASSWORD) {
+                // --- NOVA SENHA APLICADA AQUI ---
+                if (passwordInput !== 'sysmap2025') {
                     messageDiv.textContent = 'Senha incorreta. Acesso negado.';
                     return;
                 }
@@ -587,7 +589,7 @@
             'block' : 'none';
             document.getElementById('towerManagementLink').style.display = isAdm ? 'block' : 'none';
             document.getElementById('distribuicaoLink').style.display = isAdm ? 'block' : 'none'; 
-            document.getElementById('estatisticasLink').style.display = isAdm ? 'block' : 'none'; // NOVO: Estatísticas ADM
+            document.getElementById('estatisticasLink').style.display = isAdm ? 'block' : 'none'; // Estatísticas ADM
 
             // O link de prioridades fica sempre visível
             document.getElementById('priorityManagementLink').style.display = 'block'; 
@@ -759,7 +761,7 @@
         
         function createStatusCell(req, index, canEdit) { // canEdit agora é true apenas para ADM
             const statusCell = document.createElement('td');
-            const statusClass = `status-${req.status.toLowerCase().replace(' ', '-')}`;
+            const statusClass = `status-${req.status.toLowerCase().replace(' ', '-')`;
 
             if (canEdit) {
                 const select = document.createElement('select');
@@ -985,4 +987,3 @@
     </script>
 </body>
 </html>
-
