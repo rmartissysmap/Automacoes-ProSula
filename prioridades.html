@@ -272,7 +272,7 @@
             </div>
         </div>
 
-        </div>
+    </div>
 
     <script>
         // Variável global
@@ -448,26 +448,28 @@
             
             select.innerHTML = '';
             
-            let defaultSet = false;
+            // CORREÇÃO: Usamos o usuário logado como padrão
+            let defaultViewUser = LOGGED_IN_USER;
+            
+            // Adiciona o usuário logado primeiro (garantindo que seja o selecionado)
+            if (users.includes(LOGGED_IN_USER)) {
+                 const option = document.createElement('option');
+                 option.value = LOGGED_IN_USER;
+                 option.textContent = LOGGED_IN_USER;
+                 option.selected = true;
+                 select.appendChild(option);
+            }
 
-            users.forEach(user => {
+            // Adiciona os demais usuários, garantindo que o logado não seja duplicado
+            users.filter(u => u !== LOGGED_IN_USER).forEach(user => {
                 const option = document.createElement('option');
                 option.value = user;
                 option.textContent = user;
-                
-                // Tenta manter a visualização no usuário logado por padrão
-                if (user === LOGGED_IN_USER && !defaultSet) {
-                    option.selected = true;
-                    CURRENT_VIEW_USER = LOGGED_IN_USER;
-                    defaultSet = true;
-                } else if (users.length > 1 && !defaultSet) {
-                    // Se for o primeiro da lista visível (ex: Sênior vendo Júnior)
-                    option.selected = true;
-                    CURRENT_VIEW_USER = user;
-                    defaultSet = true;
-                }
                 select.appendChild(option);
             });
+            
+            // Define a visualização inicial para o usuário logado
+            CURRENT_VIEW_USER = LOGGED_IN_USER; 
             
             // Se houver mais de uma opção, ou se for ADM, exibe o controle
             if (users.length > 1 || isAdm(LOGGED_IN_USER)) {
@@ -747,13 +749,8 @@
             
             const viewableUsers = getHierarchicalUsers();
             
-            // Popula o seletor de visualização e define o usuário inicial
+            // CORREÇÃO: Popula o seletor garantindo a prioridade de visualização
             populateViewSelect(viewableUsers);
-            
-            // Se o usuário inicial (CURRENT_VIEW_USER) ainda for 'Visitante', define como o primeiro da lista
-            if (CURRENT_VIEW_USER === 'Visitante' && viewableUsers.length > 0) {
-                 CURRENT_VIEW_USER = viewableUsers[0];
-            }
             
             // Verifica se o formulário de adicionar ticket deve ser exibido (se estiver vendo a própria lista)
             if (CURRENT_VIEW_USER === LOGGED_IN_USER) {
