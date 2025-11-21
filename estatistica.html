@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>ADM - Estatísticas de Prioridades</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -101,6 +102,7 @@
             border-radius: 8px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
             min-height: 350px;
+            position: relative; /* Para Chart.js */
         }
         .chart-box h3 {
              color: #0070d2;
@@ -133,7 +135,7 @@
             
             <div id="filterControl">
                 <label for="userFilterSelect">Filtrar por Usuário (Gráficos):</label>
-                <select id="userFilterSelect" onchange="filterCharts()">
+                <select id="userFilterSelect" onchange="renderCharts()">
                     <option value="ALL">Mostrar Todos</option>
                     </select>
             </div>
@@ -142,12 +144,10 @@
                 <div class="chart-box">
                     <h3>Gráfico 1: % Conclusão (Pizza/Doughnut)</h3>
                     <canvas id="chartPizza"></canvas>
-                    <p style="text-align: center; color: #6a6a6a;">(Integração com biblioteca de gráficos necessária)</p>
                 </div>
                 <div class="chart-box">
-                    <h3>Gráfico 2: Desempenho Mensal (Combo Chart)</h3>
+                    <h3>Gráfico 2: Desempenho Mensal (Barra/Combo)</h3>
                     <canvas id="chartCombo"></canvas>
-                    <p style="text-align: center; color: #6a6a6a;">(Integração com biblioteca de gráficos necessária)</p>
                 </div>
             </div>
 
@@ -182,6 +182,9 @@
         const PRIORITY_STORAGE_PREFIX = 'userPriorities_';
         const USER_STORAGE_KEY = 'automationUserList'; 
         const ADM_USERS = ['ADM'];
+        
+        let pizzaChartInstance = null;
+        let comboChartInstance = null;
 
         // --- UTILS ---
 
@@ -235,12 +238,9 @@
             });
         }
         
-        // --- FUNÇÕES DE ESTATÍSTICAS E RENDERING ---
+        // --- FUNÇÕES DE CÁLCULO GERAL (BASE DE DADOS PARA TABELA E GRÁFICOS) ---
 
-        function renderAdmStats() {
-            const admTableBody = document.getElementById('admTableBody');
-            admTableBody.innerHTML = '';
-            
+        function getMonthlySummaryData() {
             const currentMonthKey = getMonthKey(new Date());
             const allUserNames = getAllUsersForAdminTable();
             const summary = [];
@@ -248,7 +248,6 @@
             allUserNames.forEach(userNameKey => {
                 const tickets = loadTickets(userNameKey);
 
-                // Lógica de cálculo 
                 let totalPrioritized = 0;
                 let totalAttended = 0;
                 
@@ -268,7 +267,6 @@
                     }
                 });
 
-                // CÁLCULO DAS PORCENTAGENS
                 const completionRate = totalPrioritized > 0 ? (totalAttended / totalPrioritized) * 100 : 0;
                 const percentagePending = totalPrioritized > 0 ? (100 - completionRate) : 0;
 
@@ -281,11 +279,21 @@
                     pendingRate: percentagePending.toFixed(1)
                 });
             });
+            return summary;
+        }
+
+
+        // --- FUNÇÕES DE RENDERING (TABELA) ---
+
+        function renderAdmStats() {
+            const admTableBody = document.getElementById('admTableBody');
+            admTableBody.innerHTML = '';
+            
+            const summary = getMonthlySummaryData();
 
             // Ordena pelo total de atendidos (decrescente)
             summary.sort((a, b) => b.attended - a.attended);
             
-            // Renderiza a lista de usuários na tabela
             summary.forEach(data => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
@@ -299,12 +307,139 @@
             });
         }
         
-        // Função placeholder para filtros de gráficos
-        function filterCharts() {
+        // --- FUNÇÕES DE RENDERING (GRÁFICOS) ---
+
+        function renderCharts() {
             const selectedUser = document.getElementById('userFilterSelect').value;
-            console.log("Filtrando gráficos para:", selectedUser);
-            // Lógica para renderizar gráficos Chart.js com base no selectedUser
+            const summaryData = getMonthlySummaryData();
+            
+            let usersToChart = [];
+            let totalCompleted = 0;
+            let totalPending = 0;
+
+            if (selectedUser === 'ALL') {
+                // Se 'Mostrar Todos', soma os totais para o gráfico de pizza
+                summaryData.forEach(data => {
+                    totalCompleted += parseFloat(data.attended);
+                    // O total pendente deve ser calculado sobre o total priorizado no mês:
+                    totalPending += (parseFloat(data.prioritized) - parseFloat(data.attended));
+                });
+                usersToChart = summaryData; // Usa todos para o Combo Chart (se implementado)
+            } else {
+                // Se usuário específico, calcula % sobre a performance dele
+                const userData = summaryData.find(d => d.user === selectedUser);
+                if (userData) {
+                    totalCompleted = parseFloat(userData.attended);
+                    totalPending = parseFloat(userData.prioritized) - totalCompleted;
+                    usersToChart = [userData];
+                }
+            }
+            
+            // 1. Gráfico de Pizza/Doughnut (% Conclusão)
+            
+            // Destrói instância anterior se existir
+            if (pizzaChartInstance) {
+                pizzaChartInstance.destroy();
+            }
+            const ctxPizza = document.getElementById('chartPizza').getContext('2d');
+            
+            pizzaChartInstance = new Chart(ctxPizza, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Atendido', 'Pendente'],
+                    datasets: [{
+                        data: [totalCompleted, totalPending],
+                        backgroundColor: ['#28a745', '#ffc107'], // Verde e Amarelo
+                        hoverBackgroundColor: ['#218838', '#e0a800']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'top' },
+                        title: { display: false }
+                    }
+                }
+            });
+
+
+            // 2. Gráfico Combo Chart (Desempenho Mensal)
+            
+            if (comboChartInstance) {
+                comboChartInstance.destroy();
+            }
+            
+            const ctxCombo = document.getElementById('chartCombo').getContext('2d');
+            
+            // Dados para o Combo Chart (usaremos apenas os dados do mês atual para simplicidade)
+            const comboLabels = usersToChart.map(u => u.user);
+            const comboAttended = usersToChart.map(u => u.attended);
+            const comboPrioritized = usersToChart.map(u => u.prioritized);
+            const comboRate = usersToChart.map(u => u.rate);
+
+
+            comboChartInstance = new Chart(ctxCombo, {
+                type: 'bar', // Tipo padrão é barra
+                data: {
+                    labels: comboLabels,
+                    datasets: [
+                        {
+                            label: 'Total Priorizado (Mês)',
+                            type: 'bar',
+                            backgroundColor: '#0070d2',
+                            data: comboPrioritized,
+                        },
+                        {
+                            label: 'Total Atendido (Mês)',
+                            type: 'bar',
+                            backgroundColor: '#28a745',
+                            data: comboAttended,
+                        },
+                        {
+                            label: '% Conclusão',
+                            type: 'line',
+                            data: comboRate,
+                            borderColor: '#c53929',
+                            borderWidth: 2,
+                            fill: false,
+                            yAxisID: 'y1' // Eixo Y secundário para percentual
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'top' },
+                        title: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Contagem'
+                            }
+                        },
+                        y1: { // Eixo Y secundário para a linha de percentual
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            min: 0,
+                            max: 100,
+                            grid: { drawOnChartArea: false }, // Desenha apenas para o eixo principal
+                            title: {
+                                display: true,
+                                text: 'Percentual (%)'
+                            },
+                            ticks: {
+                                callback: function(value) { return value + "%" }
+                            }
+                        }
+                    }
+                }
+            });
         }
+
 
         // --- INICIALIZAÇÃO ---
 
@@ -320,9 +455,10 @@
             
             // Se for ADM, inicia a renderização dos dados
             document.getElementById('mainContent').style.display = 'block';
+            
             populateUserFilter();
-            renderAdmStats();
-            // filterCharts(); 
+            renderAdmStats(); // Renderiza a tabela
+            renderCharts(); // Renderiza os gráficos
         };
     </script>
 </body>
