@@ -33,7 +33,7 @@
             font-weight: 600;
             font-size: 0.9em;
             padding: 5px 10px;
-            border: none; /* Borda removida */
+            border: none; 
             border-radius: 4px;
             transition: background-color 0.2s;
         }
@@ -74,6 +74,47 @@
         .input-form button:hover {
             background-color: #005aa3;
         }
+        
+        /* Controles de Visualização e Transferência */
+        #viewControl {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #d0d0d0;
+            border-radius: 8px;
+            background-color: #f5f5f5;
+        }
+        #viewControl label {
+            font-weight: 600;
+            margin-right: 10px;
+            color: #333;
+        }
+        #viewControl select {
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            width: 250px;
+        }
+        #transferSection {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px dashed #ccc;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        #transferSection button {
+            background-color: #c53929;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 15px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        #transferSection button:hover {
+             background-color: #a32e22;
+        }
+
 
         /* Lista de Prioridades (Drag and Drop) */
         #priorityList {
@@ -209,12 +250,33 @@
         <h1 id="pageTitle">Minhas Prioridades</h1>
         <h2 id="userNameDisplay">Usuário: Carregando...</h2>
 
-        <h3>Adicionar Novo Chamado</h3>
-        <div class="input-form">
-            <input type="text" id="ticketInput" placeholder="Ex: SUP-12345, EXP-4567890" pattern="[A-Z]{3,5}-\d{4,7}" title="O formato deve ser XXX-1234 ou XXXXX-1234567" required>
-            <button onclick="addTicket()">Adicionar</button>
+        <div id="viewControl" style="display: none;">
+            <label for="viewUserSelect">Visualizando Prioridades de:</label>
+            <select id="viewUserSelect" onchange="changeViewUser(this.value)">
+                </select>
+
+            <div id="transferSection" style="display: none;">
+                <label for="transferTicketSelect">Transferir Ticket:</label>
+                <select id="transferTicketSelect" style="width: 200px;">
+                    <option value="">Selecione um Ticket</option>
+                </select>
+                <label for="transferUserSelect">para</label>
+                <select id="transferUserSelect" style="width: 150px;">
+                    <option value="">Selecione um Usuário</option>
+                </select>
+                <button onclick="transferTicket()">Transferir</button>
+            </div>
         </div>
-        <div id="formMessage" style="color: red; text-align: center; margin-bottom: 10px;"></div>
+        
+        <div id="addTicketForm" style="display: none;">
+            <h3>Adicionar Novo Chamado</h3>
+            <div class="input-form">
+                <input type="text" id="ticketInput" placeholder="Ex: SUP-12345, EXP-4567890" pattern="[A-Z]{3,5}-\d{4,7}" title="O formato deve ser XXX-1234 ou XXXXX-1234567" required>
+                <button onclick="addTicket()">Adicionar</button>
+            </div>
+            <div id="formMessage" style="color: red; text-align: center; margin-bottom: 10px;"></div>
+        </div>
+
 
         <h3>Chamados Priorizados (Arraste para reordenar)</h3>
         <ul id="priorityList">
@@ -256,60 +318,82 @@
     </div>
 
     <script>
-        // Variável global (SIMULA o usuário logado)
-        let CURRENT_USER = 'Visitante';
+        // Variável global
+        let LOGGED_IN_USER = 'Visitante'; // Usuário que fez login
+        let CURRENT_VIEW_USER = ''; // Usuário cuja lista está sendo exibida (pode ser o próprio ou outro)
+        
         const PRIORITY_STORAGE_PREFIX = 'userPriorities_';
+        const USER_STORAGE_KEY = 'automationUserList'; // Para obter todos os usuários
+        
+        // Mapeamento de hierarquia (Júnior/Sênior)
+        const HIERARCHY = {
+            'LUCAS': 'DIEGO',
+            'NEDSON': 'VINICIUS'
+            // Matheus não tem júnior mapeado, mas é sênior
+        };
+
+        const SENIORS = ['DIEGO', 'VINICIUS', 'MATHEUS'];
         const ADM_USERS = ['ADM'];
 
-        // --- Funções de Utilitários de Data ---
+        // --- UTILS ---
 
-        function getTodayKey() {
-            return new Date().toLocaleDateString('pt-BR');
-        }
-
-        function getWeekKey(date) {
-            const d = new Date(date);
-            const day = d.getDay(); // 0=Domingo, 6=Sábado
-            const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Ajusta para Segunda-feira
-            const startOfWeek = new Date(d.setDate(diff));
-            return startOfWeek.toLocaleDateString('pt-BR');
-        }
-
-        function getMonthKey(date) {
-            const d = new Date(date);
-            return `${d.getMonth() + 1}/${d.getFullYear()}`;
+        function formatName(name) {
+            if (!name) return '';
+            let cleanedName = name.trim().toLowerCase();
+            return cleanedName.split(' ').map(word => {
+                if (word.length === 0) return '';
+                return word.charAt(0).toUpperCase() + word.slice(1);
+            }).join(' ');
         }
         
-        // --- Funções de Dados (CRUD) ---
-
-        function getStorageKey() {
-            // Usa o nome do usuário como chave para isolar os dados
-            return PRIORITY_STORAGE_PREFIX + CURRENT_USER.replace(/\s/g, '_');
+        function isAdm(user) {
+             return ADM_USERS.includes(formatName(user).toUpperCase());
+        }
+        
+        function isSenior(user) {
+             return SENIORS.includes(formatName(user).toUpperCase());
         }
 
-        function loadTickets() {
-            const key = getStorageKey();
+        // --- FUNÇÕES DE PERSISTÊNCIA ---
+
+        function getStorageKey(userName) {
+            return PRIORITY_STORAGE_PREFIX + formatName(userName).replace(/\s/g, '_');
+        }
+
+        function loadTickets(userName) {
+            const key = getStorageKey(userName);
             const stored = localStorage.getItem(key);
             return stored ? JSON.parse(stored) : [];
         }
 
-        function saveTickets(tickets) {
-            const key = getStorageKey();
+        function saveTickets(userName, tickets) {
+            const key = getStorageKey(userName);
             localStorage.setItem(key, JSON.stringify(tickets));
         }
+        
+        function loadAllUsers() {
+            let users = localStorage.getItem(USER_STORAGE_KEY);
+            return users ? JSON.parse(users) : [];
+        }
+
+        // --- FUNÇÕES DE CADASTRO E STATUS ---
 
         function addTicket() {
             const input = document.getElementById('ticketInput');
             const message = document.getElementById('formMessage');
             const title = input.value.trim().toUpperCase();
 
-            // Regex flexibilizado para 3-5 letras e 4-7 dígitos
+            if (CURRENT_VIEW_USER !== LOGGED_IN_USER) {
+                 showMessage('Você só pode adicionar tickets à sua própria lista de prioridades.');
+                 return;
+            }
+
             if (!title || !/^[A-Z]{3,5}-\d{4,7}$/.test(title)) {
                 message.textContent = 'Formato inválido. Use 3 a 5 letras (XXX-), seguidas de 4 a 7 dígitos (1234-1234567).';
                 return;
             }
 
-            const tickets = loadTickets();
+            const tickets = loadTickets(LOGGED_IN_USER);
             if (tickets.some(t => t.title === title)) {
                 message.textContent = `O chamado ${title} já está na sua lista de prioridades.`;
                 return;
@@ -322,9 +406,8 @@
                 doneDate: ''
             };
 
-            // Novos chamados são adicionados NO FIM da lista (de baixo para cima, mantendo a ordem de inclusão)
             tickets.push(newTicket); 
-            saveTickets(tickets);
+            saveTickets(LOGGED_IN_USER, tickets);
             input.value = '';
             message.textContent = '';
             renderList();
@@ -332,7 +415,13 @@
         }
 
         function toggleDone(id) {
-            const tickets = loadTickets();
+            // Apenas o usuário que possui a lista ou o ADM pode alterar o status
+            if (CURRENT_VIEW_USER !== LOGGED_IN_USER && !isAdm(LOGGED_IN_USER)) {
+                 showMessage('Você não tem permissão para alterar o status desta lista.', 'orange');
+                 return;
+            }
+
+            const tickets = loadTickets(CURRENT_VIEW_USER);
             const index = tickets.findIndex(t => t.id == id);
 
             if (index !== -1) {
@@ -340,26 +429,13 @@
                 tickets[index].done = !isDone;
                 tickets[index].doneDate = !isDone ? new Date().toISOString() : '';
                 
-                // Salva os tickets e, em seguida, os reordena
-                saveTickets(tickets);
+                saveTickets(CURRENT_VIEW_USER, tickets);
                 reorderOnStatusChange(id, !isDone); 
             }
         }
-
-        function deleteTicket(id) {
-            if (!confirm('Tem certeza que deseja remover este chamado da sua lista de prioridades?')) {
-                return;
-            }
-            const tickets = loadTickets();
-            const newTickets = tickets.filter(t => t.id != id);
-            saveTickets(newTickets);
-            renderList();
-            updateStats();
-        }
         
-        // Lógica de reordenação automática ao mudar o status
         function reorderOnStatusChange(id, isDone) {
-            let tickets = loadTickets();
+            let tickets = loadTickets(CURRENT_VIEW_USER);
             const ticketIndex = tickets.findIndex(t => t.id == id);
             
             if (ticketIndex === -1) return;
@@ -367,25 +443,180 @@
             const ticket = tickets.splice(ticketIndex, 1)[0];
             
             if (isDone) {
-                // Se FINALIZADO, vai para o FIM da lista (mantém a prioridade dos pendentes no topo)
+                // Se FINALIZADO, vai para o FIM da lista
                 tickets.push(ticket);
             } else {
-                // Se voltando para PENDENTE, vai para o INÍCIO da lista (volta a ser prioridade)
+                // Se voltando para PENDENTE, vai para o INÍCIO da lista
                 tickets.unshift(ticket);
             }
 
-            saveTickets(tickets);
+            saveTickets(CURRENT_VIEW_USER, tickets);
+            renderList();
+            updateStats();
+        }
+        
+        // --- FUNÇÕES DE HIERARQUIA E TRANSFERÊNCIA ---
+
+        function getHierarchicalUsers() {
+            const loggedUser = formatName(LOGGED_IN_USER).toUpperCase();
+            let viewableUsers = [LOGGED_IN_USER];
+            const allUsers = loadAllUsers().filter(u => u !== 'Selecione seu Nome...');
+
+            if (isAdm(LOGGED_IN_USER)) {
+                // ADM vê todos, exceto "Selecione..."
+                viewableUsers = allUsers;
+
+            } else if (isSenior(LOGGED_IN_USER)) {
+                // Sênior vê a si mesmo e seus juniores
+                for (const junior in HIERARCHY) {
+                    if (HIERARCHY[junior] === loggedUser) {
+                        // Encontra o nome completo do junior
+                        const juniorFullName = allUsers.find(u => formatName(u).toUpperCase() === junior);
+                        if (juniorFullName) {
+                           viewableUsers.push(juniorFullName);
+                        }
+                    }
+                }
+            }
+            return viewableUsers.map(formatName);
+        }
+
+        function populateViewSelect(viewableUsers) {
+            const select = document.getElementById('viewUserSelect');
+            const users = viewableUsers.sort();
+            
+            select.innerHTML = '';
+            
+            let defaultSet = false;
+
+            users.forEach(user => {
+                const option = document.createElement('option');
+                option.value = user;
+                option.textContent = user;
+                
+                // Tenta manter a visualização no usuário logado por padrão
+                if (user === LOGGED_IN_USER && !defaultSet) {
+                    option.selected = true;
+                    CURRENT_VIEW_USER = LOGGED_IN_USER;
+                    defaultSet = true;
+                } else if (users.length > 1 && !defaultSet) {
+                    // Se não for o logado, mas é o primeiro da lista de supervisão
+                    option.selected = true;
+                    CURRENT_VIEW_USER = user;
+                    defaultSet = true;
+                }
+                select.appendChild(option);
+            });
+            
+            // Se houver mais de uma opção, exibe o controle
+            if (users.length > 1 || isAdm(LOGGED_IN_USER)) {
+                document.getElementById('viewControl').style.display = 'block';
+            }
+        }
+        
+        function populateTransferSelects(viewableUsers) {
+            const selectTarget = document.getElementById('transferUserSelect');
+            const selectTicket = document.getElementById('transferTicketSelect');
+            
+            selectTarget.innerHTML = '<option value="">Selecione Destino</option>';
+            selectTicket.innerHTML = '<option value="">Selecione um Ticket</option>';
+
+            const allUsers = loadAllUsers().filter(u => formatName(u) !== CURRENT_VIEW_USER && u !== 'Selecione seu Nome...');
+            
+            // Populando destinos (todos os outros usuários)
+            allUsers.map(formatName).sort().forEach(user => {
+                const option = document.createElement('option');
+                option.value = user;
+                option.textContent = user;
+                selectTarget.appendChild(option);
+            });
+            
+            // Populando tickets do usuário em visualização
+            const tickets = loadTickets(CURRENT_VIEW_USER).filter(t => !t.done); // Apenas pendentes
+            tickets.forEach(ticket => {
+                const option = document.createElement('option');
+                option.value = ticket.id;
+                option.textContent = ticket.title;
+                selectTicket.appendChild(option);
+            });
+        }
+        
+        function changeViewUser(newViewUser) {
+            CURRENT_VIEW_USER = newViewUser;
+            
+            // Controla a visibilidade do formulário de adicionar ticket
+            const addForm = document.getElementById('addTicketForm');
+            addForm.style.display = (newViewUser === LOGGED_IN_USER) ? 'block' : 'none';
+
+            // Controla a visibilidade da seção de transferência
+            if (isAdm(LOGGED_IN_USER)) {
+                document.getElementById('transferSection').style.display = 'flex';
+                populateTransferSelects(getHierarchicalUsers()); 
+            }
+            
             renderList();
             updateStats();
         }
 
+        function transferTicket() {
+            if (!isAdm(LOGGED_IN_USER)) return;
+            
+            const ticketId = document.getElementById('transferTicketSelect').value;
+            const targetUser = document.getElementById('transferUserSelect').value;
+            const sourceUser = CURRENT_VIEW_USER; 
+            
+            if (!ticketId || !targetUser) {
+                showMessage('Selecione um Ticket e um Usuário de Destino para a transferência.');
+                return;
+            }
+            
+            if (sourceUser === targetUser) {
+                showMessage('Origem e Destino não podem ser o mesmo usuário.', 'orange');
+                return;
+            }
+            
+            if (!confirm(`Tem certeza que deseja transferir o ticket selecionado de ${sourceUser} para ${targetUser}?`)) {
+                return;
+            }
+            
+            // 1. Remove do usuário de origem
+            let sourceTickets = loadTickets(sourceUser);
+            const ticketIndex = sourceTickets.findIndex(t => t.id == ticketId);
+            
+            if (ticketIndex === -1) {
+                showMessage('Erro: Ticket não encontrado na lista de origem.', 'red');
+                return;
+            }
+            
+            const [ticketToTransfer] = sourceTickets.splice(ticketIndex, 1);
+            saveTickets(sourceUser, sourceTickets);
+            
+            // 2. Adiciona ao usuário de destino (como prioridade máxima, no topo)
+            let targetTickets = loadTickets(targetUser);
+            targetTickets.unshift(ticketToTransfer); // Adiciona no início
+            saveTickets(targetUser, targetTickets);
+            
+            showMessage(`Ticket ${ticketToTransfer.title} transferido de ${sourceUser} para ${targetUser} com sucesso.`, 'green');
+            
+            // Renderiza novamente a lista de origem
+            document.getElementById('transferTicketSelect').value = ''; 
+            document.getElementById('transferUserSelect').value = '';
+            renderList();
+            updateStats();
+        }
 
-        // --- Funções de Renderização ---
-
+        // --- FUNÇÕES DE RENDERIZAÇÃO E ESTATÍSTICAS (Ajustadas para CURRENT_VIEW_USER) ---
+        
         function renderList() {
             const ul = document.getElementById('priorityList');
-            const tickets = loadTickets();
+            // Carrega tickets do usuário em visualização
+            const tickets = loadTickets(CURRENT_VIEW_USER); 
             ul.innerHTML = '';
+
+            // Se for ADM, atualiza o seletor de tickets para transferência
+            if (isAdm(LOGGED_IN_USER)) {
+                populateTransferSelects(getHierarchicalUsers()); 
+            }
 
             if (tickets.length === 0) {
                 document.getElementById('emptyMessage').style.display = 'block';
@@ -394,17 +625,21 @@
                 document.getElementById('emptyMessage').style.display = 'none';
             }
 
+            // O drag-and-drop e exclusão só são permitidos na sua própria lista (ou se for ADM)
+            const canEditOrder = (CURRENT_VIEW_USER === LOGGED_IN_USER || isAdm(LOGGED_IN_USER));
+            const canDeleteTicket = canEditOrder;
+
+
             tickets.forEach(ticket => {
                 const li = document.createElement('li');
-                li.setAttribute('draggable', 'true');
+                li.setAttribute('draggable', canEditOrder ? 'true' : 'false');
                 li.setAttribute('data-id', ticket.id);
-                // A classe é usada para aplicar o estilo de borda
                 li.className = ticket.done ? 'status-done' : 'status-pending'; 
 
                 // Handle de Arraste (Mover)
                 const handle = document.createElement('span');
                 handle.className = 'handle';
-                handle.innerHTML = '&#9776;'; // Símbolo de sanduíche/três linhas (para arrastar)
+                handle.innerHTML = canEditOrder ? '&#9776;' : '&#9679;'; // Ícone diferente se não for arrastável
                 li.appendChild(handle);
 
                 // Título
@@ -413,104 +648,45 @@
                 titleSpan.textContent = ticket.title;
                 li.appendChild(titleSpan);
 
-                // Botão de Status
+                // Botão de Status (Permitido para o próprio usuário ou ADM)
                 const statusBtn = document.createElement('button');
                 const statusClass = ticket.done ? 'status-done' : 'status-pending';
                 statusBtn.className = 'status-btn ' + statusClass;
                 statusBtn.textContent = ticket.done ? 'Atendido' : 'Pendente';
+                statusBtn.disabled = !canEditOrder; // Desabilita se for apenas visualizador
                 statusBtn.onclick = () => toggleDone(ticket.id);
                 li.appendChild(statusBtn);
 
-                // Botão de Excluir
+                // Botão de Excluir (Permitido apenas para o próprio usuário ou ADM)
                 const deleteBtn = document.createElement('button');
                 deleteBtn.className = 'delete-btn';
-                deleteBtn.innerHTML = '&#10006;'; // Símbolo de X
+                deleteBtn.innerHTML = '&#10006;'; 
+                deleteBtn.disabled = !canDeleteTicket; 
                 deleteBtn.onclick = () => deleteTicket(ticket.id);
                 li.appendChild(deleteBtn);
 
                 ul.appendChild(li);
             });
-            setupDragAndDrop();
+            if (canEditOrder) {
+                setupDragAndDrop();
+            }
         }
         
-        // --- Lógica de Arraste e Solta (Drag and Drop) ---
-
-        let dragListItem = null;
-
-        function setupDragAndDrop() {
-            const list = document.getElementById('priorityList');
-            const listItems = list.querySelectorAll('li');
-
-            listItems.forEach(item => {
-                item.addEventListener('dragstart', handleDragStart);
-                item.addEventListener('dragover', handleDragOver);
-                item.addEventListener('dragleave', handleDragLeave);
-                item.addEventListener('drop', handleDrop);
-                item.addEventListener('dragend', handleDragEnd);
-            });
-        }
-
-        function handleDragStart(e) {
-            dragListItem = this;
-            setTimeout(() => this.classList.add('dragging'), 0);
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/html', this.innerHTML);
-        }
-
-        function handleDragOver(e) {
-            e.preventDefault();
-            e.dataTransfer.dropEffect = 'move';
-            if (this !== dragListItem) {
-                this.style.borderTop = '2px solid #0070d2';
-            }
-        }
-
-        function handleDragLeave() {
-            this.style.borderTop = '';
-        }
-
-        function handleDrop(e) {
-            e.preventDefault();
-            this.style.borderTop = '';
-
-            if (dragListItem !== this) {
-                const isAfter = dragListItem.compareDocumentPosition(this) & Node.DOCUMENT_POSITION_FOLLOWING;
-                
-                if (isAfter) {
-                    this.parentNode.insertBefore(dragListItem, this.nextSibling);
-                } else {
-                    this.parentNode.insertBefore(dragListItem, this);
-                }
-                saveReorder();
-            }
-        }
-
-        function handleDragEnd() {
-            this.classList.remove('dragging');
-            dragListItem = null;
-        }
-
-        function saveReorder() {
-            const list = document.getElementById('priorityList');
-            const items = Array.from(list.children);
-            const originalTickets = loadTickets();
-            
-            const reorderedTickets = items.map(item => {
-                const id = item.getAttribute('data-id');
-                return originalTickets.find(t => t.id == id);
-            }).filter(t => t); 
-
-            saveTickets(reorderedTickets);
-            renderList(); // Renderiza novamente para limpar qualquer estilo de arraste/solta
-        }
-
-
-        // --- Funções de Estatísticas ---
-
         function updateStats() {
-            const tickets = loadTickets();
+            // As estatísticas agora se referem ao CURRENT_VIEW_USER
+            const tickets = loadTickets(CURRENT_VIEW_USER);
             const doneTickets = tickets.filter(t => t.done && t.doneDate);
 
+            // ... (Lógica de data omitida por ser a mesma) ...
+            function getTodayKey() { return new Date().toLocaleDateString('pt-BR'); }
+            function getWeekKey(date) { 
+                const d = new Date(date); const day = d.getDay(); 
+                const diff = d.getDate() - day + (day === 0 ? -6 : 1); 
+                const startOfWeek = new Date(d.setDate(diff)); 
+                return startOfWeek.toLocaleDateString('pt-BR'); 
+            }
+            function getMonthKey(date) { return `${new Date(date).getMonth() + 1}/${new Date(date).getFullYear()}`; }
+            
             const today = getTodayKey();
             const thisWeek = getWeekKey(new Date());
             const thisMonth = getMonthKey(new Date());
@@ -539,12 +715,59 @@
             document.getElementById('weekCount').textContent = weekCount;
             document.getElementById('monthCount').textContent = monthCount;
 
-            if (ADM_USERS.includes(CURRENT_USER.toUpperCase())) {
+            if (isAdm(LOGGED_IN_USER)) {
                 renderAdmStats(thisMonth);
             }
         }
+        
+        // --- Drag and Drop (mantida, mas só ativa se canEditOrder for true) ---
+        let dragListItem = null;
 
-        // --- Funções ADM ---
+        function setupDragAndDrop() {
+            const list = document.getElementById('priorityList');
+            const listItems = list.querySelectorAll('li');
+
+            listItems.forEach(item => {
+                item.addEventListener('dragstart', handleDragStart);
+                item.addEventListener('dragover', handleDragOver);
+                item.addEventListener('dragleave', handleDragLeave);
+                item.addEventListener('drop', handleDrop);
+                item.addEventListener('dragend', handleDragEnd);
+            });
+        }
+
+        function handleDragStart(e) {
+            // Verifica se o item é arrastável
+            if (this.getAttribute('draggable') === 'false') {
+                e.preventDefault();
+                return;
+            }
+            dragListItem = this;
+            setTimeout(() => this.classList.add('dragging'), 0);
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', this.innerHTML);
+        }
+        
+        function saveReorder() {
+            const list = document.getElementById('priorityList');
+            const items = Array.from(list.children);
+            const originalTickets = loadTickets(CURRENT_VIEW_USER);
+            
+            const reorderedTickets = items.map(item => {
+                const id = item.getAttribute('data-id');
+                return originalTickets.find(t => t.id == id);
+            }).filter(t => t); 
+
+            saveTickets(CURRENT_VIEW_USER, reorderedTickets);
+            renderList(); 
+        }
+        
+        function handleDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; if (this !== dragListItem) { this.style.borderTop = '2px solid #0070d2'; } }
+        function handleDragLeave() { this.style.borderTop = ''; }
+        function handleDrop(e) { e.preventDefault(); this.style.borderTop = ''; if (dragListItem !== this) { const isAfter = dragListItem.compareDocumentPosition(this) & Node.DOCUMENT_POSITION_FOLLOWING; if (isAfter) { this.parentNode.insertBefore(dragListItem, this.nextSibling); } else { this.parentNode.insertBefore(dragListItem, this); } saveReorder(); } }
+        function handleDragEnd() { this.classList.remove('dragging'); dragListItem = null; }
+
+        // --- Funções ADM (Estatísticas e Renderização) ---
 
         function getAllUsers() {
             const allKeys = Object.keys(localStorage);
@@ -565,31 +788,15 @@
                 const storedTickets = localStorage.getItem(userTicketsKey);
                 const tickets = storedTickets ? JSON.parse(storedTickets) : [];
 
-                // Filtra tickets que foram priorizados OU atendidos neste mês
-                const relevantTickets = tickets.filter(t => {
-                    // ID do ticket é a data de criação
-                    const creationDate = new Date(t.id);
-                    const ticketMonth = getMonthKey(creationDate); 
-                    
-                    const doneDate = t.doneDate ? new Date(t.doneDate) : null;
-                    const doneMonth = doneDate ? getMonthKey(doneDate) : null;
-                    
-                    return ticketMonth === currentMonthKey || doneMonth === currentMonthKey;
-                });
-                
-                // Calculando Totais
+                // Lógica de cálculo (omito para brevidade, mas é a mesma que você já tem)
                 let totalPrioritized = 0;
                 let totalAttended = 0;
-
-                relevantTickets.forEach(t => {
+                tickets.forEach(t => {
                     const creationDate = new Date(t.id);
                     const ticketMonth = getMonthKey(creationDate); 
-                    
-                    // Conta como priorizado se foi criado neste mês
                     if (ticketMonth === currentMonthKey) {
                         totalPrioritized++;
                     }
-                    // Conta como atendido se foi concluído neste mês
                     if (t.done && t.doneDate) {
                         const doneMonth = getMonthKey(new Date(t.doneDate));
                         if (doneMonth === currentMonthKey) {
@@ -623,29 +830,43 @@
             });
         }
 
+
         // --- Inicialização ---
 
         function initPage() {
-            // Tenta obter o usuário logado da página principal
             const lastUser = localStorage.getItem('lastUser');
+            
             if (lastUser) {
-                // Formata o nome do usuário para a exibição e uso na chave
-                CURRENT_USER = lastUser; 
-                document.getElementById('userNameDisplay').textContent = 'Usuário: ' + CURRENT_USER;
+                LOGGED_IN_USER = formatName(lastUser); 
+                document.getElementById('userNameDisplay').textContent = 'Usuário: ' + LOGGED_IN_USER;
             } else {
                 alert('Usuário não identificado. Redirecionando para o login.');
-                window.location.href = 'index.html'; // Redireciona para a página principal
+                window.location.href = 'index.html'; 
                 return;
             }
-
-            // Configura a visibilidade do painel ADM
-            if (ADM_USERS.includes(CURRENT_USER.toUpperCase())) {
-                document.getElementById('admStats').style.display = 'block';
-            } else {
-                document.getElementById('admStats').style.display = 'none';
+            
+            const viewableUsers = getHierarchicalUsers();
+            
+            // Popula o seletor de visualização e define o usuário inicial
+            populateViewSelect(viewableUsers);
+            
+            // Se o usuário inicial (CURRENT_VIEW_USER) ainda for 'Visitante', define como o primeiro da lista
+            if (CURRENT_VIEW_USER === 'Visitante' && viewableUsers.length > 0) {
+                 CURRENT_VIEW_USER = viewableUsers[0];
+            }
+            
+            // Verifica se o formulário de adicionar ticket deve ser exibido (se estiver vendo a própria lista)
+            if (CURRENT_VIEW_USER === LOGGED_IN_USER) {
+                 document.getElementById('addTicketForm').style.display = 'block';
             }
 
-            // Renderiza e Atualiza
+            // Configura a visibilidade do painel ADM e de transferência
+            if (isAdm(LOGGED_IN_USER)) {
+                 document.getElementById('admStats').style.display = 'block';
+                 document.getElementById('transferSection').style.display = 'flex';
+                 populateTransferSelects(viewableUsers);
+            }
+            
             renderList();
             updateStats();
         }
