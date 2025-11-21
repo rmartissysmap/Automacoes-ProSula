@@ -64,7 +64,7 @@
             width: 100%;
         }
         /* Links de Gerenciamento e Prioridades */
-        #userManagementLink, #towerManagementLink, #priorityManagementLink, #distribuicaoLink {
+        #userManagementLink, #towerManagementLink, #priorityManagementLink, #distribuicaoLink, #estatisticasLink {
             background: none;
             border: none;
             color: #0070d2;
@@ -72,7 +72,7 @@
             padding: 2px 0; cursor: pointer; 
             font-size: 0.9em; font-weight: 600;
         }
-        #userManagementLink, #towerManagementLink, #distribuicaoLink {
+        #userManagementLink, #towerManagementLink, #distribuicaoLink, #estatisticasLink {
             display: none; /* Oculto por padrão, JS mostra para ADM */
         }
         #logoutButton {
@@ -83,7 +83,7 @@
             padding: 2px 0; cursor: pointer; 
             font-size: 0.9em; font-weight: 600;
         }
-        #userManagementLink:hover, #logoutButton:hover, #towerManagementLink:hover, #priorityManagementLink:hover, #distribuicaoLink:hover {
+        #userManagementLink:hover, #logoutButton:hover, #towerManagementLink:hover, #priorityManagementLink:hover, #distribuicaoLink:hover, #estatisticasLink:hover {
             text-decoration: underline;
         }
         /* --- FIM DO NOVO PAINEL --- */
@@ -252,7 +252,7 @@
         }
         .modal-content select, .modal-content input, .modal-content button {
             margin-top: 15px;
-            padding: 10px; width: 100%;
+            padding: 10px; w-idth: 100%;
             box-sizing: border-box; border-radius: 4px;
         }
         .modal-content select {
@@ -314,7 +314,8 @@
             </div>
             <div class="user-options">
                 <a href="prioridades.html" id="priorityManagementLink">Minhas Prioridades</a>
-                <a href="distribuiçãochamado.html" id="distribuicaoLink">Distribuir Chamados</a>
+                <a href="distribuiçãochamado.html" id="distribuicaoLink">Distribuir Chamados</a> 
+                <a href="estatisticas.html" id="estatisticasLink">Estatísticas ADM</a> 
                 <a href="InclusãoExclusãoUsuário.html" id="userManagementLink">Gerenciar Usuários</a>
                 <a href="torresFrentes.html" id="towerManagementLink">Gerenciar Torres</a>
                 <button id="logoutButton">Trocar Usuário</button>
@@ -585,7 +586,8 @@
             document.getElementById('userManagementLink').style.display = isAdm ?
             'block' : 'none';
             document.getElementById('towerManagementLink').style.display = isAdm ? 'block' : 'none';
-            document.getElementById('distribuicaoLink').style.display = isAdm ? 'block' : 'none'; // NOVO LINK
+            document.getElementById('distribuicaoLink').style.display = isAdm ? 'block' : 'none'; 
+            document.getElementById('estatisticasLink').style.display = isAdm ? 'block' : 'none'; // NOVO: Estatísticas ADM
 
             // O link de prioridades fica sempre visível
             document.getElementById('priorityManagementLink').style.display = 'block'; 
@@ -983,5 +985,3 @@
     </script>
 </body>
 </html>
-
-
