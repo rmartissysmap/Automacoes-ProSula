@@ -152,8 +152,7 @@
                     <option value="bar">Barra</option>
                     <option value="line">Linha</option>
                     <option value="pie">Pizza</option>
-                    <option value="doughnut">Doughnut</option>
-                </select>
+                    </select>
             </div>
 
             <div id="chartArea">
@@ -395,7 +394,7 @@
             const ctxPizza = document.getElementById('chartPizza').getContext('2d');
             
             pizzaChartInstance = new Chart(ctxPizza, {
-                type: 'doughnut',
+                type: 'doughnut', // Mantido como Doughnut para o Gráfico 1
                 data: {
                     labels: ['Atendido (Total)', 'Pendente (Total)'],
                     datasets: [{
@@ -426,17 +425,15 @@
             const comboAttended = chartData.map(u => u.attended);
             const comboPrioritized = chartData.map(u => u.prioritized);
             const comboRate = chartData.map(u => u.rate);
-            
-            let comboChartType = selectedChartType;
-            let comboDatasets;
 
-            // Se o tipo selecionado for PIZZA ou DOUGHNUT, ajustamos os datasets
-            if (selectedChartType === 'pie' || selectedChartType === 'doughnut') {
-                // Para gráficos de pizza, usamos os totais do PIZZA CHART, mas apenas para o caso de um único usuário
-                // Se for ALL, usamos o total geral.
+            let comboDatasets;
+            let finalChartType = selectedChartType; // Padrão para Bar, Line, etc.
+
+            // Se o tipo selecionado for PIZZA, ajustamos os datasets para o formato de Pizza
+            if (selectedChartType === 'pie') {
                 
-                const totalP = (selectedUser === 'ALL') ? totalCompleted + totalPending : parseFloat(chartData[0].prioritized);
-                const totalA = (selectedUser === 'ALL') ? totalCompleted : parseFloat(chartData[0].attended);
+                const totalP = (selectedUser === 'ALL') ? totalCompleted + totalPending : (chartData[0]?.prioritized || 0);
+                const totalA = (selectedUser === 'ALL') ? totalCompleted : (chartData[0]?.attended || 0);
                 const totalPen = totalP - totalA;
 
                 comboDatasets = [
@@ -446,7 +443,8 @@
                         hoverBackgroundColor: ['#218838', '#e0a800']
                     }
                 ];
-                comboLabels = ['Atendido', 'Pendente']; // Labels genéricas
+                comboLabels = ['Atendido', 'Pendente']; 
+                finalChartType = 'pie'; // Sobrescreve o tipo
                 
             } else { // Tipos Barra, Linha (Usamos 3 datasets)
                 comboDatasets = [
@@ -472,24 +470,25 @@
                         yAxisID: 'y1' 
                     }
                 ];
-                // Se o tipo for 'line', removemos o type: 'bar' dos primeiros datasets (Chart.js é inteligente, mas setamos a linha explicitly)
+                // Se o tipo for 'line', ajusta para gráfico de linhas completo
                 if (selectedChartType === 'line') {
                     comboDatasets[0].type = 'line';
                     comboDatasets[1].type = 'line';
                     comboDatasets[0].borderColor = '#0070d2';
                     comboDatasets[1].borderColor = '#28a745';
-                    comboDatasets[0].backgroundColor = 'rgba(0, 112, 210, 0.2)'; // Fundo leve
+                    comboDatasets[0].backgroundColor = 'rgba(0, 112, 210, 0.2)'; 
                     comboDatasets[1].backgroundColor = 'rgba(40, 167, 69, 0.2)';
                     comboDatasets[0].fill = true;
                     comboDatasets[1].fill = true;
+                    finalChartType = 'line';
                 } else {
-                    comboChartType = 'bar'; // Garante que volte a ser barra se for combo
+                    finalChartType = 'bar'; // Retorna ao modo combo/barra
                 }
             }
 
 
             comboChartInstance = new Chart(ctxCombo, {
-                type: comboChartType, 
+                type: finalChartType, 
                 data: {
                     labels: comboLabels,
                     datasets: comboDatasets
@@ -504,12 +503,11 @@
                         y: {
                             beginAtZero: true,
                             title: { display: true, text: 'Contagem' },
-                            // Oculta o eixo Y principal se for pizza/doughnut
-                            display: (selectedChartType !== 'pie' && selectedChartType !== 'doughnut') 
+                            display: (finalChartType !== 'pie' && finalChartType !== 'doughnut') 
                         },
-                        y1: { // Eixo Y secundário (apenas para a linha de percentual)
+                        y1: { // Eixo Y secundário (apenas para a linha de percentual no modo combo)
                             type: 'linear',
-                            display: (selectedChartType !== 'pie' && selectedChartType !== 'doughnut'),
+                            display: (finalChartType === 'bar' || finalChartType === 'line'),
                             position: 'right',
                             min: 0,
                             max: 100,
@@ -518,8 +516,7 @@
                             ticks: { callback: function(value) { return value + "%" } }
                         },
                         x: {
-                             // Oculta o eixo X se for pizza/doughnut
-                            display: (selectedChartType !== 'pie' && selectedChartType !== 'doughnut') 
+                            display: (finalChartType !== 'pie' && finalChartType !== 'doughnut') 
                         }
                     }
                 }
