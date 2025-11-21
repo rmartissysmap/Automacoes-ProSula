@@ -220,7 +220,7 @@
             margin-top: 30px;
             padding-top: 20px;
             border-top: 1px solid #0070d2;
-            display: none; /* CORREÇÃO: Começa oculto e o JS exibe se for ADM */
+            display: none; /* CORRIGIDO: Começa oculto e o JS exibe se for ADM */
         }
         #admStats h3 {
             color: #0070d2;
@@ -330,7 +330,7 @@
         const HIERARCHY = {
             'LUCAS': 'DIEGO',
             'NEDSON': 'VINICIUS'
-            // Matheus não tem júnior mapeado, mas é sênior
+            // Matheus não tem júnior mapeado, mas a estrutura deve estar pronta
         };
 
         const SENIORS = ['DIEGO', 'VINICIUS', 'MATHEUS'];
@@ -820,7 +820,7 @@
                 // CÁLCULO DAS PORCENTAGENS
                 const completionRate = totalPrioritized > 0 ? (totalAttended / totalPrioritized) * 100 : 0;
                 
-                // % Pendente é o complemento da % Conclusão (0% se Total Priorizado for 0)
+                // % Pendente é o complemento da % Conclusão sobre o volume priorizado no mês
                 const percentagePending = totalPrioritized > 0 ? (100 - completionRate) : 0;
 
 
